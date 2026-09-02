@@ -13,7 +13,7 @@ from PySide6.QtSvg import QSvgRenderer
 
 from .actions import elapsed_text
 from .i18n import tr
-from .model import KeyConfig, default_visualizer_icon
+from .model import KeyConfig, default_action_icon
 from .models import match_deck_model
 
 
@@ -342,7 +342,7 @@ def render_key_image(key: KeyConfig, size: tuple[int, int] = (96, 96)) -> Image.
     icon_path = key.active_icon if key.active and key.active_icon else key.icon
     glyph = key.active_glyph if key.active and key.active_glyph else key.glyph
     if not icon_path and not glyph:
-        icon_path = default_visualizer_icon(key)
+        icon_path = default_action_icon(key)
     icon_rendered = False
     if icon_path and Path(icon_path).is_file():
         try:

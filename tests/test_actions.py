@@ -5,7 +5,7 @@ from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer, Qt
 
 from sdeck.actions import ActionRunner, elapsed_text
 from sdeck.keyboard import ShortcutError, shortcut_from_qt, shortcut_names
-from sdeck.model import ACTION_KEYBOARD, ACTION_MULTI, ACTION_SPECTRUM, ACTION_VU, KeyConfig, MultiActionStep
+from sdeck.model import ACTION_KEYBOARD, ACTION_MEDIA, ACTION_MULTI, ACTION_SPECTRUM, ACTION_VU, KeyConfig, MultiActionStep
 
 
 app = QCoreApplication.instance() or QCoreApplication([])
@@ -132,6 +132,16 @@ class StereoVuToggleTests(unittest.TestCase):
         runner.close()
 
 class KeyboardShortcutTests(unittest.TestCase):
+    def test_media_control_uses_the_global_virtual_keyboard(self) -> None:
+        runner = ActionRunner()
+        runner.audio.timer.stop()
+        runner._timer.stop()
+        sent: list[str] = []
+        runner.keyboard.send = sent.append
+        runner.trigger(0, KeyConfig(action=ACTION_MEDIA, media_control="NEXT"))
+        self.assertEqual(sent, ["NEXT"])
+        runner.close()
+
     def test_qt_recorder_formats_modifiers_and_extended_function_keys(self) -> None:
         modifiers = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier
         self.assertEqual(shortcut_from_qt(Qt.Key.Key_F22, modifiers), "Ctrl+Alt+F22")
@@ -139,6 +149,9 @@ class KeyboardShortcutTests(unittest.TestCase):
 
     def test_shortcut_parser_supports_f22_and_modifiers(self) -> None:
         self.assertEqual(shortcut_names("ctrl + shift + F22"), ["KEY_LEFTCTRL", "KEY_LEFTSHIFT", "KEY_F22"])
+
+    def test_shortcut_parser_supports_media_stop(self) -> None:
+        self.assertEqual(shortcut_names("STOP"), ["KEY_STOPCD"])
 
     def test_shortcut_parser_rejects_empty_components(self) -> None:
         with self.assertRaises(ShortcutError):

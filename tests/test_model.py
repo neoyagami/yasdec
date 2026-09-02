@@ -3,19 +3,27 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sdeck.model import ACTION_KEYBOARD, ACTION_MULTI, ACTION_SHELL, ACTION_SPECTRUM, ACTION_VU, AppConfig, KeyConfig, MultiActionStep, default_visualizer_icon, replicate_key_config
+from sdeck.model import ACTION_KEYBOARD, ACTION_MEDIA, ACTION_MULTI, ACTION_SHELL, ACTION_SPECTRUM, ACTION_VU, AppConfig, KeyConfig, MultiActionStep, default_action_icon, replicate_key_config
 
 
 class ConfigTests(unittest.TestCase):
     def test_visualizer_fallback_icons_only_apply_without_preview(self) -> None:
         spectrum = KeyConfig(action=ACTION_SPECTRUM, spectrum_preview=False)
         vu = KeyConfig(action=ACTION_VU, vu_preview=False)
-        self.assertTrue(default_visualizer_icon(spectrum).endswith("audio-waveform.svg"))
-        self.assertTrue(default_visualizer_icon(vu).endswith("sliders-horizontal.svg"))
+        self.assertTrue(default_action_icon(spectrum).endswith("audio-waveform.svg"))
+        self.assertTrue(default_action_icon(vu).endswith("sliders-horizontal.svg"))
         spectrum.spectrum_preview = True
         vu.vu_preview = True
-        self.assertEqual(default_visualizer_icon(spectrum), "")
-        self.assertEqual(default_visualizer_icon(vu), "")
+        self.assertEqual(default_action_icon(spectrum), "")
+        self.assertEqual(default_action_icon(vu), "")
+        media = KeyConfig(action=ACTION_MEDIA, media_control="VOLUMEDOWN")
+        self.assertTrue(default_action_icon(media).endswith("volume-1.svg"))
+
+    def test_media_control_round_trip(self) -> None:
+        key = KeyConfig(action=ACTION_MEDIA, media_control="PREVIOUS")
+        restored = KeyConfig.from_dict(key.to_dict())
+        self.assertEqual((restored.action, restored.media_control), (ACTION_MEDIA, "PREVIOUS"))
+        self.assertEqual(KeyConfig.from_dict({"media_control": "INVALID"}).media_control, "PLAYPAUSE")
 
     def test_key_configuration_replication_is_deep_and_resets_runtime_state(self) -> None:
         nested = KeyConfig(label="Nested", action=ACTION_KEYBOARD, keyboard_shortcut="F22")

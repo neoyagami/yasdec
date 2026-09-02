@@ -11,7 +11,7 @@ from .audio import AudioController
 from .applications import desktop_exec
 from .i18n import tr
 from .keyboard import ShortcutError, VirtualKeyboard
-from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep
+from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MEDIA, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep
 from .obs import ObsManager
 from .spectrum import SpectrumController, StereoVuController
 
@@ -104,6 +104,8 @@ class ActionRunner(QObject):
             executed = self._run_application(key.application_desktop_file)
         elif key.action == ACTION_KEYBOARD:
             executed = self._send_keyboard(key.keyboard_shortcut)
+        elif key.action == ACTION_MEDIA:
+            executed = self._send_keyboard(key.media_control, media=True)
         elif key.action == ACTION_WEBSOCKET:
             payload = key.payload_on if desired_state else key.payload_off
             self._send_websocket(key.websocket_url, payload)
@@ -186,7 +188,7 @@ class ActionRunner(QObject):
             self._set_state(key, desired_state)
         self.key_changed.emit(index)
 
-    def _send_keyboard(self, shortcut: str) -> bool:
+    def _send_keyboard(self, shortcut: str, media: bool = False) -> bool:
         try:
             self.keyboard.send(shortcut)
         except ShortcutError as exc:
@@ -198,7 +200,7 @@ class ActionRunner(QObject):
         except OSError:
             self.status.emit(tr("Virtual keyboard is not configured. Install uinput permissions and sign in again."), False)
             return False
-        self.status.emit(tr("Keyboard shortcut sent"), True)
+        self.status.emit(tr("Media control sent") if media else tr("Keyboard shortcut sent"), True)
         return True
 
     def _run_multi_action(self, index: int, key: KeyConfig, space_id: str) -> None:

@@ -34,6 +34,7 @@ automatically. Models centered around dials are not currently supported.
   Cinnamon, XFCE, and MATE.
 - Shell commands, text WebSocket messages, toggle actions, and active timers.
 - Global virtual-keyboard shortcuts on Wayland and X11 through Linux `uinput`.
+- Dedicated global media controls for playback, tracks, mute, and volume.
 - Ordered multi actions with independent In/Out sequences and pauses.
 - Local authenticated HTTP API for integrations and automation.
 - English and Spanish interfaces backed by external translation catalogs.
@@ -277,6 +278,11 @@ names such as `F22`, `CTRL+SHIFT+F22`, or `ALT+P`. F13-F24 and common media
 keys are supported. The shortcut editor can record the next combination from
 the keyboard or remain fully manual, including function keys that are not
 physically present on the keyboard.
+
+The dedicated **Media control** action provides ready-to-use Play/Pause,
+Previous, Next, Stop, Mute, Volume Down, and Volume Up keys. These controls use
+the same global `uinput` backend and receive suitable bundled icons when no
+custom icon or symbol is configured.
 
 Install narrowly scoped permissions from a source checkout with:
 

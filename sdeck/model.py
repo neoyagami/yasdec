@@ -21,16 +21,29 @@ ACTION_SPECTRUM = "spectrum"
 ACTION_VU = "vu"
 ACTION_APPLICATION = "application"
 ACTION_KEYBOARD = "keyboard"
+ACTION_MEDIA = "media"
 ACTION_MULTI = "multi"
 
+MEDIA_CONTROLS = ("PLAYPAUSE", "PREVIOUS", "NEXT", "STOP", "MUTE", "VOLUMEDOWN", "VOLUMEUP")
 
-def default_visualizer_icon(key: "KeyConfig") -> str:
-    """Return the bundled fallback icon used when a visual preview is disabled."""
+
+def default_action_icon(key: "KeyConfig") -> str:
+    """Return the bundled fallback icon for supported actions."""
     icon_name = ""
     if key.action == ACTION_SPECTRUM and not key.spectrum_preview:
         icon_name = "audio-waveform.svg"
     elif key.action == ACTION_VU and not key.vu_preview:
         icon_name = "sliders-horizontal.svg"
+    elif key.action == ACTION_MEDIA:
+        icon_name = {
+            "PLAYPAUSE": "circle-play.svg",
+            "PREVIOUS": "arrow-left.svg",
+            "NEXT": "arrow-right.svg",
+            "STOP": "square.svg",
+            "MUTE": "volume-x.svg",
+            "VOLUMEDOWN": "volume-1.svg",
+            "VOLUMEUP": "volume-2.svg",
+        }.get(key.media_control, "circle-play.svg")
     if not icon_name:
         return ""
     return str(Path(__file__).resolve().parent.parent / "assets" / "icons" / "lucide" / icon_name)
@@ -78,6 +91,7 @@ class KeyConfig:
     command_off: str = ""
     application_desktop_file: str = ""
     keyboard_shortcut: str = "F22"
+    media_control: str = "PLAYPAUSE"
     websocket_url: str = "ws://127.0.0.1:4455"
     payload_on: str = ""
     payload_off: str = ""
@@ -119,6 +133,8 @@ class KeyConfig:
             values["spectrum_grid_size"] = max(1, min(3, int(values.get("spectrum_grid_size", 1))))
         except (TypeError, ValueError):
             values["spectrum_grid_size"] = 1
+        if values.get("media_control", "PLAYPAUSE") not in MEDIA_CONTROLS:
+            values["media_control"] = "PLAYPAUSE"
         return cls(**values)
 
     def to_dict(self) -> dict[str, Any]:

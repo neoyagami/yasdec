@@ -31,10 +31,10 @@ from PySide6.QtWidgets import (
 
 from .actions import elapsed_text
 from .applications import cache_application_icon, read_desktop_application
-from .icon_library import ApplicationChoiceDialog, IconChoiceDialog
+from .icon_library import ApplicationChoiceDialog, IconChoiceDialog, lucide_dir
 from .i18n import tr
 from .keyboard import MODIFIER_KEYS, shortcut_from_qt
-from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep, Space, default_visualizer_icon
+from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MEDIA, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep, Space, default_action_icon
 
 
 class ShortcutCaptureDialog(QDialog):
@@ -203,7 +203,7 @@ class KeyButton(QAbstractButton):
         icon_path = self.key.active_icon if self.key.active and self.key.active_icon else self.key.icon
         glyph = self.key.active_glyph if self.key.active and self.key.active_glyph else self.key.glyph
         if not icon_path and not glyph:
-            icon_path = default_visualizer_icon(self.key)
+            icon_path = default_action_icon(self.key)
         compact = self.width() < 90
         icon_side = int(min(self.width(), self.height()) * (0.48 if compact else 0.53))
         if self.mini_vu is not None:
@@ -425,6 +425,7 @@ class KeyInspector(QWidget):
         self.action.addItem(tr("Switch space"), ACTION_SPACE)
         self.action.addItem(tr("Open application"), ACTION_APPLICATION)
         self.action.addItem(tr("Keyboard shortcut"), ACTION_KEYBOARD)
+        self.action.addItem(tr("Media control"), ACTION_MEDIA)
         if not action_only:
             self.action.addItem(tr("Multi action"), ACTION_MULTI)
             form.addRow(tr("Name"), self.label)
@@ -444,6 +445,7 @@ class KeyInspector(QWidget):
         self.action_stack.addWidget(self._space_page())
         self.action_stack.addWidget(self._application_page())
         self.action_stack.addWidget(self._keyboard_page())
+        self.action_stack.addWidget(self._media_page())
         self.action_stack.addWidget(self._multi_page() if not action_only else QWidget())
         layout.addWidget(self.action_stack)
 
@@ -492,6 +494,7 @@ class KeyInspector(QWidget):
         self.vu_color_end.changed.connect(self._store)
         self.target.currentIndexChanged.connect(self._store)
         self.keyboard_shortcut.textEdited.connect(self._store)
+        self.media_control.currentIndexChanged.connect(self._store)
         self.toggle.toggled.connect(self._toggle_changed)
         self.timer.toggled.connect(self._store)
         self.setEnabled(False)
@@ -679,6 +682,29 @@ class KeyInspector(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted and dialog.shortcut:
             self.keyboard_shortcut.setText(dialog.shortcut)
             self._store()
+
+    def _media_page(self) -> QWidget:
+        page = QWidget()
+        form = QFormLayout(page)
+        form.setContentsMargins(0, 12, 0, 0)
+        self.media_control = QComboBox()
+        choices = (
+            ("circle-play.svg", tr("Play / pause"), "PLAYPAUSE"),
+            ("arrow-left.svg", tr("Previous track"), "PREVIOUS"),
+            ("arrow-right.svg", tr("Next track"), "NEXT"),
+            ("square.svg", tr("Stop playback"), "STOP"),
+            ("volume-x.svg", tr("Mute / unmute"), "MUTE"),
+            ("volume-1.svg", tr("Volume down"), "VOLUMEDOWN"),
+            ("volume-2.svg", tr("Volume up"), "VOLUMEUP"),
+        )
+        for icon_name, label, key_name in choices:
+            self.media_control.addItem(QIcon(str(lucide_dir() / icon_name)), label, key_name)
+        self.media_control.setIconSize(QSize(24, 24))
+        form.addRow(tr("Control"), self.media_control)
+        hint = QLabel(tr("Sends a global Linux media key through uinput."))
+        hint.setWordWrap(True)
+        form.addRow("", hint)
+        return page
 
     def _multi_page(self) -> QWidget:
         page = QWidget()
@@ -900,7 +926,7 @@ class KeyInspector(QWidget):
     def edit_key(self, key: KeyConfig) -> None:
         self.key = key
         self.setEnabled(True)
-        widgets = [self.label, self.background_color, self.active_background_color, self.text_color, self.icon_color, self.action, self.command, self.command_off, self.ws_url, self.payload_on, self.payload_off, self.audio_kind, self.audio_target, self.obs_operation, self.obs_scene, self.obs_group, self.obs_target, self.spectrum_operation, self.spectrum_kind, self.spectrum_target, self.spectrum_fps, self.spectrum_grid, self.spectrum_preview, self.vu_operation, self.vu_kind, self.vu_target, self.vu_fps, self.vu_preview, self.vu_color_start, self.vu_color_end, self.target, self.keyboard_shortcut, self.toggle, self.timer]
+        widgets = [self.label, self.background_color, self.active_background_color, self.text_color, self.icon_color, self.action, self.command, self.command_off, self.ws_url, self.payload_on, self.payload_off, self.audio_kind, self.audio_target, self.obs_operation, self.obs_scene, self.obs_group, self.obs_target, self.spectrum_operation, self.spectrum_kind, self.spectrum_target, self.spectrum_fps, self.spectrum_grid, self.spectrum_preview, self.vu_operation, self.vu_kind, self.vu_target, self.vu_fps, self.vu_preview, self.vu_color_start, self.vu_color_end, self.target, self.keyboard_shortcut, self.media_control, self.toggle, self.timer]
         for widget in widgets:
             widget.blockSignals(True)
         self.label.setText(key.label)
@@ -937,6 +963,7 @@ class KeyInspector(QWidget):
         self.vu_color_start.set_color(key.vu_color_start)
         self.vu_color_end.set_color(key.vu_color_end)
         self.keyboard_shortcut.setText(key.keyboard_shortcut)
+        self.media_control.setCurrentIndex(max(0, self.media_control.findData(key.media_control)))
         self.multi_action_in = deepcopy(key.multi_action_in)
         self.multi_action_out = deepcopy(key.multi_action_out)
         self._refresh_multi_lists()
@@ -1002,7 +1029,7 @@ class KeyInspector(QWidget):
 
     def _update_visibility(self) -> None:
         action = self.action.currentData()
-        pages = {ACTION_NONE: 0, ACTION_SHELL: 1, ACTION_WEBSOCKET: 2, ACTION_AUDIO: 3, ACTION_OBS: 4, ACTION_SPECTRUM: 5, ACTION_VU: 6, ACTION_SPACE: 7, ACTION_APPLICATION: 8, ACTION_KEYBOARD: 9, ACTION_MULTI: 10}
+        pages = {ACTION_NONE: 0, ACTION_SHELL: 1, ACTION_WEBSOCKET: 2, ACTION_AUDIO: 3, ACTION_OBS: 4, ACTION_SPECTRUM: 5, ACTION_VU: 6, ACTION_SPACE: 7, ACTION_APPLICATION: 8, ACTION_KEYBOARD: 9, ACTION_MEDIA: 10, ACTION_MULTI: 11}
         self.action_stack.setCurrentIndex(pages.get(action, 0))
         obs_operation = self.obs_operation.currentData()
         obs_toggle = action == ACTION_OBS and obs_operation in ("source", "input_mute")
@@ -1072,6 +1099,7 @@ class KeyInspector(QWidget):
         self.key.command_off = self.command_off.text()
         self.key.application_desktop_file = getattr(self, "application_desktop_file", "")
         self.key.keyboard_shortcut = self.keyboard_shortcut.text().strip()
+        self.key.media_control = str(self.media_control.currentData() or "PLAYPAUSE")
         self.key.websocket_url = self.ws_url.text().strip()
         self.key.payload_on = self.payload_on.toPlainText()
         self.key.payload_off = self.payload_off.toPlainText()
@@ -1167,6 +1195,7 @@ def describe_multi_step(step: MultiActionStep) -> str:
         ACTION_SPACE: key.target_space,
         ACTION_APPLICATION: Path(key.application_desktop_file).stem,
         ACTION_KEYBOARD: key.keyboard_shortcut,
+        ACTION_MEDIA: key.media_control,
     }.get(key.action, "")
     label = {
         ACTION_SHELL: tr("Shell command"),
@@ -1178,6 +1207,7 @@ def describe_multi_step(step: MultiActionStep) -> str:
         ACTION_SPACE: tr("Switch space"),
         ACTION_APPLICATION: tr("Open application"),
         ACTION_KEYBOARD: tr("Keyboard shortcut"),
+        ACTION_MEDIA: tr("Media control"),
     }.get(key.action, tr("No action"))
     suffix = f" · {details}" if details else ""
     return f"{label}{suffix} · {state}"

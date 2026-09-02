@@ -16,7 +16,7 @@ from .i18n import tr
 
 LUCIDE_LABELS = {
     "mic": "Microphone", "mic-off": "Muted microphone",
-    "volume-2": "Volume", "volume-x": "Mute", "speaker": "Speaker",
+    "volume-1": "Low volume", "volume-2": "Volume", "volume-x": "Mute", "speaker": "Speaker",
     "headphones": "Headphones", "radio": "Broadcast", "antenna": "Antenna",
     "audio-waveform": "Audio waveform", "music": "Music", "video": "Video",
     "video-off": "Video off", "camera": "Camera", "eye": "Visible",
