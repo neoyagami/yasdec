@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=YASDEC
+Comment=Visual controller for Stream Deck
+Comment[es]=Control visual para Stream Deck
+Exec=@PROJECT_DIR@/run.sh
+Icon=sdeck
+Terminal=false
+Categories=Utility;
+StartupNotify=true

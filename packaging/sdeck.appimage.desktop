@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=YASDEC
+Comment=Configure and control Stream Deck devices
+Exec=YASDEC
+Icon=sdeck
+Terminal=false
+Categories=Utility;
+Keywords=Stream Deck;OBS;Controller;Automation;
+StartupNotify=true

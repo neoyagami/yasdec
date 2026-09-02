@@ -1,0 +1,122 @@
+name: Test and build AppImage
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: appimage-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  APPIMAGETOOL_VERSION: "1.9.1"
+  APPIMAGETOOL_SHA256: "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
+
+jobs:
+  test:
+    name: Python tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-build.txt
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-build.txt
+
+      - name: Compile Python sources
+        run: python -m compileall -q sdeck
+
+      - name: Validate translation catalogs
+        run: python -m json.tool assets/i18n/en.json >/dev/null && python -m json.tool assets/i18n/es.json >/dev/null
+
+      - name: Run test suite
+        run: python -m unittest discover -s tests -v
+
+  appimage:
+    name: AppImage x86_64
+    needs: test
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-build.txt
+
+      - name: Install build dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-build.txt
+
+      - name: Download appimagetool
+        run: |
+          curl --fail --location --retry 3 \
+            --output "$RUNNER_TEMP/appimagetool-x86_64.AppImage" \
+            "https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-x86_64.AppImage"
+          echo "${APPIMAGETOOL_SHA256}  $RUNNER_TEMP/appimagetool-x86_64.AppImage" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/appimagetool-x86_64.AppImage"
+
+      - name: Build AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+          APPIMAGETOOL: ${{ runner.temp }}/appimagetool-x86_64.AppImage
+        run: ./packaging/build-appimage.sh
+
+      - name: Verify checksum
+        run: sha256sum --check dist/YASDEC-x86_64.AppImage.sha256
+
+      - name: Smoke-test AppImage startup
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          set +e
+          timeout --foreground 5 ./dist/YASDEC-x86_64.AppImage
+          status=$?
+          set -e
+          if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+            exit "$status"
+          fi
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YASDEC-AppImage-x86_64
+          path: |
+            dist/YASDEC-x86_64.AppImage
+            dist/YASDEC-x86_64.AppImage.sha256
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Attach files to tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: |
+            dist/YASDEC-x86_64.AppImage
+            dist/YASDEC-x86_64.AppImage.sha256

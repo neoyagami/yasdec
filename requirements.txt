@@ -1,0 +1,7 @@
+# Core desktop application
+PySide6>=6.7
+Pillow>=10
+evdev>=1.7
+
+# Elgato Stream Deck hardware support (includes its HID dependency)
+streamdeck>=0.9.6
