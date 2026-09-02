@@ -3,10 +3,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sdeck.model import ACTION_KEYBOARD, ACTION_MULTI, ACTION_SHELL, AppConfig, KeyConfig, MultiActionStep, replicate_key_config
+from sdeck.model import ACTION_KEYBOARD, ACTION_MULTI, ACTION_SHELL, ACTION_SPECTRUM, ACTION_VU, AppConfig, KeyConfig, MultiActionStep, default_visualizer_icon, replicate_key_config
 
 
 class ConfigTests(unittest.TestCase):
+    def test_visualizer_fallback_icons_only_apply_without_preview(self) -> None:
+        spectrum = KeyConfig(action=ACTION_SPECTRUM, spectrum_preview=False)
+        vu = KeyConfig(action=ACTION_VU, vu_preview=False)
+        self.assertTrue(default_visualizer_icon(spectrum).endswith("audio-waveform.svg"))
+        self.assertTrue(default_visualizer_icon(vu).endswith("sliders-horizontal.svg"))
+        spectrum.spectrum_preview = True
+        vu.vu_preview = True
+        self.assertEqual(default_visualizer_icon(spectrum), "")
+        self.assertEqual(default_visualizer_icon(vu), "")
+
     def test_key_configuration_replication_is_deep_and_resets_runtime_state(self) -> None:
         nested = KeyConfig(label="Nested", action=ACTION_KEYBOARD, keyboard_shortcut="F22")
         source = KeyConfig(label="Source", action=ACTION_MULTI, active=True, started_at="2026-01-01T00:00:00+00:00")

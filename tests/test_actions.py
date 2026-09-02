@@ -102,6 +102,35 @@ class StereoVuToggleTests(unittest.TestCase):
         self.assertFalse(key.active)
         runner.close()
 
+    def test_spectrum_and_vu_previews_run_together_but_fullscreen_is_exclusive(self) -> None:
+        runner = ActionRunner()
+        runner.audio.timer.stop()
+        runner._timer.stop()
+        runner.audio.capture_device = lambda *_args: "monitor.test"
+        runner.spectrum.start = lambda *_args: True
+        runner.spectrum.stop = lambda: None
+        runner.vu.start = lambda *_args: True
+        runner.vu.stop = lambda: None
+        spectrum = KeyConfig(action=ACTION_SPECTRUM, spectrum_preview=True, toggle=True)
+        vu = KeyConfig(action=ACTION_VU, vu_preview=True, toggle=True)
+        runner._visible_keys = [spectrum, vu]
+
+        runner._sync_visual_previews()
+        self.assertTrue(runner.spectrum_active)
+        self.assertTrue(runner.vu_active)
+        self.assertFalse(runner.spectrum_fullscreen)
+        self.assertFalse(runner.vu_fullscreen)
+
+        runner.trigger(0, spectrum)
+        self.assertTrue(runner.spectrum_fullscreen)
+        self.assertFalse(runner.vu_active)
+
+        runner.trigger(0, spectrum)
+        self.assertFalse(runner.spectrum_fullscreen)
+        self.assertTrue(runner.spectrum_active)
+        self.assertTrue(runner.vu_active)
+        runner.close()
+
 class KeyboardShortcutTests(unittest.TestCase):
     def test_qt_recorder_formats_modifiers_and_extended_function_keys(self) -> None:
         modifiers = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier

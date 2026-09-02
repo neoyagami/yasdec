@@ -34,7 +34,7 @@ from .applications import cache_application_icon, read_desktop_application
 from .icon_library import ApplicationChoiceDialog, IconChoiceDialog
 from .i18n import tr
 from .keyboard import MODIFIER_KEYS, shortcut_from_qt
-from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep, Space
+from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep, Space, default_visualizer_icon
 
 
 class ShortcutCaptureDialog(QDialog):
@@ -202,6 +202,8 @@ class KeyButton(QAbstractButton):
 
         icon_path = self.key.active_icon if self.key.active and self.key.active_icon else self.key.icon
         glyph = self.key.active_glyph if self.key.active and self.key.active_glyph else self.key.glyph
+        if not icon_path and not glyph:
+            icon_path = default_visualizer_icon(self.key)
         compact = self.width() < 90
         icon_side = int(min(self.width(), self.height()) * (0.48 if compact else 0.53))
         if self.mini_vu is not None:
@@ -568,8 +570,10 @@ class KeyInspector(QWidget):
         self.spectrum_form = QFormLayout(page)
         self.spectrum_form.setContentsMargins(0, 12, 0, 0)
         self.spectrum_operation = QComboBox()
-        self.spectrum_operation.addItem(tr("Start analyzer"), "start")
-        self.spectrum_operation.addItem(tr("Stop analyzer"), "stop")
+        self.spectrum_operation.addItem(tr("Full-screen toggle (on / off)"), "start")
+        self.spectrum_operation.addItem(tr("Stop only"), "stop")
+        self.spectrum_mode_hint = QLabel()
+        self.spectrum_mode_hint.setWordWrap(True)
         self.spectrum_kind = QComboBox()
         self.spectrum_kind.addItem(tr("Output (monitor)"), "sink")
         self.spectrum_kind.addItem(tr("Input"), "source")
@@ -584,6 +588,7 @@ class KeyInspector(QWidget):
         self.spectrum_preview = QCheckBox(tr("Preview on this key"))
         self.spectrum_preview.setToolTip(tr("Keeps capture active and displays a mini spectrum while full screen is off"))
         self.spectrum_form.addRow(tr("Operation"), self.spectrum_operation)
+        self.spectrum_form.addRow(self.spectrum_mode_hint)
         self.spectrum_form.addRow(tr("Type"), self.spectrum_kind)
         self.spectrum_form.addRow(tr("Channel"), self.spectrum_target)
         self.spectrum_form.addRow(tr("Speed"), self.spectrum_fps)
@@ -596,8 +601,10 @@ class KeyInspector(QWidget):
         self.vu_form = QFormLayout(page)
         self.vu_form.setContentsMargins(0, 12, 0, 0)
         self.vu_operation = QComboBox()
-        self.vu_operation.addItem(tr("Start VU meter"), "start")
-        self.vu_operation.addItem(tr("Stop VU meter"), "stop")
+        self.vu_operation.addItem(tr("Full-screen toggle (on / off)"), "start")
+        self.vu_operation.addItem(tr("Stop only"), "stop")
+        self.vu_mode_hint = QLabel()
+        self.vu_mode_hint.setWordWrap(True)
         self.vu_kind = QComboBox()
         self.vu_kind.addItem(tr("Output (monitor)"), "sink")
         self.vu_kind.addItem(tr("Input"), "source")
@@ -618,6 +625,7 @@ class KeyInspector(QWidget):
         color_layout.addWidget(self.vu_color_end)
         color_layout.addStretch()
         self.vu_form.addRow(tr("Operation"), self.vu_operation)
+        self.vu_form.addRow(self.vu_mode_hint)
         self.vu_form.addRow(tr("Type"), self.vu_kind)
         self.vu_form.addRow(tr("Channel"), self.vu_target)
         self.vu_form.addRow(tr("Speed"), self.vu_fps)
@@ -1000,6 +1008,14 @@ class KeyInspector(QWidget):
         obs_toggle = action == ACTION_OBS and obs_operation in ("source", "input_mute")
         spectrum_start = action == ACTION_SPECTRUM and self.spectrum_operation.currentData() == "start"
         vu_start = action == ACTION_VU and self.vu_operation.currentData() == "start"
+        self.spectrum_mode_hint.setText(
+            tr("First press opens the analyzer full screen; second press returns to the optional key preview.")
+            if spectrum_start else tr("This key only stops the analyzer; it never starts it.")
+        )
+        self.vu_mode_hint.setText(
+            tr("First press opens the VU meter full screen; second press returns to the optional key preview.")
+            if vu_start else tr("This key only stops the VU meter; it never starts it.")
+        )
         supports_toggle = action in (ACTION_SHELL, ACTION_WEBSOCKET, ACTION_AUDIO, ACTION_MULTI) or obs_toggle or spectrum_start or vu_start
         forced_toggle = action in (ACTION_AUDIO, ACTION_MULTI) or obs_toggle or spectrum_start or vu_start
         if forced_toggle and not self.toggle.isChecked():
@@ -1015,7 +1031,7 @@ class KeyInspector(QWidget):
             if self.key:
                 self.key.toggle = False
         self.toggle.setEnabled(not forced_toggle)
-        self.toggle.setVisible(supports_toggle)
+        self.toggle.setVisible(supports_toggle and not spectrum_start and not vu_start)
         self.toggle_box.setVisible(supports_toggle or spectrum_start or vu_start)
         self.timer.setVisible(not self.action_only and supports_toggle and self.toggle.isChecked())
         self.active_icon.setVisible(not self.action_only and ((supports_toggle and self.toggle.isChecked()) or spectrum_start or vu_start))

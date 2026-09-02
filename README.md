@@ -215,6 +215,14 @@ A spectrum start key behaves as a toggle:
   spectrum replaces that key's normal icon.
 - Disabled without preview: spectrum capture stops completely.
 
+The Spectrum and Stereo VU start keys are full-screen toggles: the first press
+opens the visualization and the second returns to its optional key preview.
+Separate stop-only keys are available for layouts that need a dedicated stop
+control. Mini Spectrum and mini VU previews can run simultaneously on different
+keys; only the full-screen modes are mutually exclusive.
+When preview is disabled and no custom icon or symbol is configured, YASDEC
+uses a bundled waveform icon for Spectrum or a controls icon for Stereo VU.
+
 Columns represent logarithmic frequency bands and rows represent intensity.
 The block style can be solid, a 2 × 2 LCD grid, or a 3 × 3 LCD grid. The 3 × 3
 style turns every key into nine small retro colored cells and samples three

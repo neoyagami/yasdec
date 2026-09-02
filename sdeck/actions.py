@@ -123,6 +123,7 @@ class ActionRunner(QObject):
                         self.status.emit(tr("Analyzer preview active"), True)
                     else:
                         self._stop_spectrum()
+                    self._sync_visual_previews()
                     return
                 if self.vu_active:
                     self._stop_vu()
@@ -156,6 +157,7 @@ class ActionRunner(QObject):
                         self.status.emit(tr("VU meter preview active"), True)
                     else:
                         self._stop_vu()
+                    self._sync_visual_previews()
                     return
                 if self.spectrum_active:
                     self._stop_spectrum()
@@ -382,7 +384,9 @@ class ActionRunner(QObject):
 
     def sync_spectrum_preview(self) -> None:
         """Keep capture resolution and inactive preview in sync with the editor."""
-        if self.vu_active and not self.spectrum_active:
+        if self.vu_fullscreen:
+            if self.spectrum_active:
+                self._stop_spectrum()
             return
         if self.spectrum_fullscreen:
             candidate = self.spectrum_key
@@ -426,7 +430,9 @@ class ActionRunner(QObject):
 
     def sync_vu_preview(self) -> None:
         """Keep stereo capture and its inactive per-key preview synchronized."""
-        if self.spectrum_active and not self.vu_active:
+        if self.spectrum_fullscreen:
+            if self.vu_active:
+                self._stop_vu()
             return
         if self.vu_fullscreen:
             candidate = self.vu_key

@@ -382,10 +382,12 @@ class MainWindow(QMainWindow):
         self.save_timer.stop()
         self.save()
         self.deck.render_space(self.config.current().keys[: self.config.key_count])
-        if self.runner.spectrum_active:
+        if self.runner.spectrum_fullscreen:
             self._draw_spectrum()
-        elif self.runner.vu_active:
+        elif self.runner.vu_fullscreen:
             self._draw_vu()
+        elif self.runner.spectrum_active or self.runner.vu_active:
+            self._draw_audio_previews()
         self.statusBar().showMessage(tr("Space sent to device"), 2500)
 
     def trigger_key(self, index: int) -> None:
@@ -520,12 +522,15 @@ class MainWindow(QMainWindow):
         for button in self.key_buttons:
             button.set_spectrum_level(None)
             button.set_mini_spectrum(None)
-            button.set_vu_cells(None)
-            button.set_mini_vu(None)
         self.deck.render_space(self.config.current().keys[: self.config.key_count])
+        if self.runner.vu_active:
+            self._draw_audio_previews()
 
     def _draw_spectrum(self) -> None:
         if not self.spectrum_levels:
+            return
+        if not self.runner.spectrum_fullscreen:
+            self._draw_audio_previews()
             return
         keys = self.config.current().keys[: self.config.key_count]
         for button in self.key_buttons:
@@ -533,15 +538,6 @@ class MainWindow(QMainWindow):
             button.set_mini_spectrum(None)
             button.set_vu_cells(None)
             button.set_mini_vu(None)
-        if not self.runner.spectrum_fullscreen:
-            preview_index = next((
-                index for index, key in enumerate(keys)
-                if key is self.runner.spectrum_key and key.spectrum_preview
-            ), -1)
-            if preview_index >= 0:
-                self.key_buttons[preview_index].set_mini_spectrum(self.spectrum_levels)
-                self.deck.render_mini_spectrum(preview_index, keys[preview_index], self.spectrum_levels)
-            return
         stop_indices = {index for index, key in enumerate(keys) if key.action == ACTION_SPECTRUM and key.spectrum_operation == "stop"}
         rows = (self.config.key_count + self.config.columns - 1) // self.config.columns
         spectrum_key = self.runner.spectrum_key
@@ -594,23 +590,19 @@ class MainWindow(QMainWindow):
             button.set_vu_cells(None)
             button.set_mini_vu(None)
         self.deck.render_space(self.config.current().keys[: self.config.key_count])
+        if self.runner.spectrum_active:
+            self._draw_audio_previews()
 
     def _draw_vu(self) -> None:
+        if not self.runner.vu_fullscreen:
+            self._draw_audio_previews()
+            return
         keys = self.config.current().keys[: self.config.key_count]
         for button in self.key_buttons:
             button.set_spectrum_level(None)
             button.set_mini_spectrum(None)
             button.set_vu_cells(None)
             button.set_mini_vu(None)
-        if not self.runner.vu_fullscreen:
-            preview_index = next((
-                index for index, key in enumerate(keys)
-                if key is self.runner.vu_key and key.vu_preview
-            ), -1)
-            if preview_index >= 0:
-                self.key_buttons[preview_index].set_mini_vu(self.vu_levels)
-                self.deck.render_mini_vu(preview_index, keys[preview_index], self.vu_levels)
-            return
         meter_key = self.runner.vu_key
         if meter_key is None:
             return
@@ -629,6 +621,39 @@ class MainWindow(QMainWindow):
             key_colors.append(cell_colors)
             button.set_vu_cells(levels, cell_colors)
         self.deck.render_vu(key_levels, key_colors)
+
+    def _draw_audio_previews(self) -> None:
+        """Draw both inactive audio previews without either timer erasing the other."""
+        if self.runner.spectrum_fullscreen or self.runner.vu_fullscreen:
+            return
+        keys = self.config.current().keys[: self.config.key_count]
+        for button in self.key_buttons:
+            button.set_spectrum_level(None)
+            button.set_mini_spectrum(None)
+            button.set_vu_cells(None)
+            button.set_mini_vu(None)
+
+        spectrum_preview = None
+        if self.runner.spectrum_active and self.spectrum_levels:
+            spectrum_index = next((
+                index for index, key in enumerate(keys)
+                if key is self.runner.spectrum_key and key.spectrum_preview
+            ), -1)
+            if spectrum_index >= 0:
+                self.key_buttons[spectrum_index].set_mini_spectrum(self.spectrum_levels)
+                spectrum_preview = (spectrum_index, keys[spectrum_index], self.spectrum_levels)
+
+        vu_preview = None
+        if self.runner.vu_active:
+            vu_index = next((
+                index for index, key in enumerate(keys)
+                if key is self.runner.vu_key and key.vu_preview
+            ), -1)
+            if vu_index >= 0:
+                self.key_buttons[vu_index].set_mini_vu(self.vu_levels)
+                vu_preview = (vu_index, keys[vu_index], self.vu_levels)
+
+        self.deck.render_audio_previews(spectrum_preview, vu_preview)
 
     def configure_api(self) -> None:
         dialog = ApiSettingsDialog(self.config, self)

@@ -13,7 +13,7 @@ from PySide6.QtSvg import QSvgRenderer
 
 from .actions import elapsed_text
 from .i18n import tr
-from .model import KeyConfig
+from .model import KeyConfig, default_visualizer_icon
 from .models import match_deck_model
 
 
@@ -115,6 +115,20 @@ class DeckBackend(QObject):
             self._pending_spectrum = ("mini-vu", index, deepcopy(key), tuple(levels))
             self._condition.notify()
 
+    def render_audio_previews(
+        self,
+        spectrum: tuple[int, KeyConfig, list[float]] | None,
+        vu: tuple[int, KeyConfig, tuple[float, float]] | None,
+    ) -> None:
+        """Replace the pending hardware update with one atomic preview batch."""
+        if not self.deck:
+            return
+        spectrum_copy = None if spectrum is None else (spectrum[0], deepcopy(spectrum[1]), list(spectrum[2]))
+        vu_copy = None if vu is None else (vu[0], deepcopy(vu[1]), tuple(vu[2]))
+        with self._condition:
+            self._pending_spectrum = ("audio-previews", spectrum_copy, vu_copy)
+            self._condition.notify()
+
     def _start_worker(self) -> None:
         self._worker_stop = False
         self._worker = threading.Thread(target=self._worker_loop, name="sdeck-hardware", daemon=True)
@@ -149,6 +163,8 @@ class DeckBackend(QObject):
                     self._write_mini_spectrum(command[2], command[3], command[4])
                 elif command[0] == "visual" and command[1] == "mini-vu":
                     self._write_mini_vu(command[2], command[3], command[4])
+                elif command[0] == "visual" and command[1] == "audio-previews":
+                    self._write_audio_previews(command[2], command[3])
                 elif command[0] == "visual" and command[1] == "vu":
                     self._write_vu(command[2], command[3])
                 elif command[0] == "visual":
@@ -200,6 +216,16 @@ class DeckBackend(QObject):
             self.deck.set_key_image(index, native)
         self._spectrum_state.pop(index, None)
         self._screen_spectrum_signature = None
+
+    def _write_audio_previews(
+        self,
+        spectrum: tuple[int, KeyConfig, list[float]] | None,
+        vu: tuple[int, KeyConfig, tuple[float, float]] | None,
+    ) -> None:
+        if spectrum is not None:
+            self._write_mini_spectrum(*spectrum)
+        if vu is not None:
+            self._write_mini_vu(*vu)
 
     def _write_vu(self, levels: list, colors: list) -> None:
         if not self.deck:
@@ -315,6 +341,8 @@ def render_key_image(key: KeyConfig, size: tuple[int, int] = (96, 96)) -> Image.
     draw = ImageDraw.Draw(image)
     icon_path = key.active_icon if key.active and key.active_icon else key.icon
     glyph = key.active_glyph if key.active and key.active_glyph else key.glyph
+    if not icon_path and not glyph:
+        icon_path = default_visualizer_icon(key)
     icon_rendered = False
     if icon_path and Path(icon_path).is_file():
         try:

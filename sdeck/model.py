@@ -24,6 +24,18 @@ ACTION_KEYBOARD = "keyboard"
 ACTION_MULTI = "multi"
 
 
+def default_visualizer_icon(key: "KeyConfig") -> str:
+    """Return the bundled fallback icon used when a visual preview is disabled."""
+    icon_name = ""
+    if key.action == ACTION_SPECTRUM and not key.spectrum_preview:
+        icon_name = "audio-waveform.svg"
+    elif key.action == ACTION_VU and not key.vu_preview:
+        icon_name = "sliders-horizontal.svg"
+    if not icon_name:
+        return ""
+    return str(Path(__file__).resolve().parent.parent / "assets" / "icons" / "lucide" / icon_name)
+
+
 @dataclass
 class MultiActionStep:
     kind: str = "action"
