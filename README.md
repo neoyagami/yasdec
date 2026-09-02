@@ -375,6 +375,13 @@ pyproject.toml      Package metadata and optional dependency groups
 - Virtual keyboard support requires write access only to `/dev/uinput`; never
   run the complete YASDEC application as root.
 
+## AI-assisted development
+
+YASDEC was developed with assistance from **OpenAI Codex**. AI was used to help
+write and review portions of the code, tests, documentation, and repository
+assets under human direction. The project maintainer made the product decisions
+and remains responsible for reviewing and maintaining the resulting work.
+
 ## License
 
 YASDEC is free software licensed under the **GNU General Public License,
