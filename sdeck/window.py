@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFrame,
     QLabel,
     QListWidget,
@@ -243,6 +245,8 @@ class MainWindow(QMainWindow):
         menu = QMenu()
         show_action = QAction(tr("Open YASDEC"), menu)
         show_action.triggered.connect(self.show_from_tray)
+        about_action = QAction(tr("About YASDEC"), menu)
+        about_action.triggered.connect(self.show_about)
         quit_action = QAction(
             QIcon(str(Path(__file__).resolve().parent.parent / "assets/icons/lucide/power.svg")),
             tr("Quit YASDEC completely"),
@@ -251,6 +255,8 @@ class MainWindow(QMainWindow):
         quit_action.setToolTip(tr("Stop the controller and release the device"))
         quit_action.triggered.connect(self.quit_app)
         menu.addAction(show_action)
+        menu.addSeparator()
+        menu.addAction(about_action)
         menu.addSeparator()
         menu.addAction(quit_action)
         self.tray.setContextMenu(menu)
@@ -731,6 +737,40 @@ class MainWindow(QMainWindow):
         self.show()
         self.raise_()
         self.activateWindow()
+
+    def show_about(self) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("About YASDEC"))
+        dialog.setWindowIcon(self.windowIcon())
+        dialog.setMinimumWidth(430)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(28, 24, 28, 20)
+        layout.setSpacing(12)
+
+        title = QLabel("YASDEC")
+        title.setObjectName("brand")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+
+        details = QLabel(
+            "<div style='text-align:center'>"
+            "Yet Another Stream Deck Controller<br><br>"
+            f"{tr('Version {version}', version='0.1.0')} · 2026<br>"
+            f"{tr('Licensed under GNU GPLv3 or later')}<br><br>"
+            "<a href='https://github.com/neoyagami/yasdec'>"
+            f"{tr('Download and source code')}</a>"
+            "</div>"
+        )
+        details.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        details.setOpenExternalLinks(True)
+        details.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        layout.addWidget(details)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.button(QDialogButtonBox.StandardButton.Close).setText(tr("Close"))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.exec()
 
     def _tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick):
