@@ -3,47 +3,91 @@ set -euo pipefail
 
 app_dir="${APPDIR:-$(cd "$(dirname "$0")" && pwd)}"
 
-if [[ "${1:-}" == "--install-user" ]] || [[ "${1:-}" == "--uninstall-user" ]]; then
-  if [[ -z "${APPIMAGE:-}" ]] || [[ ! -f "${APPIMAGE:-}" ]]; then
-    echo "The original AppImage path is unavailable; run this command from the AppImage itself." >&2
-    exit 1
-  fi
-  mode="install"
-  if [[ "$1" == "--uninstall-user" ]]; then
-    mode="uninstall"
-  fi
-  shift
-  /usr/bin/bash "$app_dir/usr/share/sdeck/install-appimage-user.sh" \
-    "$mode" "$APPIMAGE" "$app_dir/sdeck.desktop" "$app_dir/sdeck.svg" "$@"
-  exit $?
-fi
+install_user=false
+uninstall_user=false
+autostart=false
+install_uinput=false
+remove_uinput=false
+management_requested=false
+unknown_arguments=()
 
-if [[ "${1:-}" == "--install-uinput" ]] || [[ "${1:-}" == "--remove-uinput" ]]; then
-  if [[ "${EUID}" -eq 0 ]]; then
-    echo "Run the AppImage without sudo; YASDEC will request permission only for the uinput installer." >&2
-    exit 2
-  fi
+for argument in "$@"; do
+  case "$argument" in
+    --install-user) install_user=true; management_requested=true ;;
+    --uninstall-user) uninstall_user=true; management_requested=true ;;
+    --autostart) autostart=true; management_requested=true ;;
+    --install-uinput) install_uinput=true; management_requested=true ;;
+    --remove-uinput) remove_uinput=true; management_requested=true ;;
+    *) unknown_arguments+=("$argument") ;;
+  esac
+done
+
+install_uinput_permissions() {
+  local mode="$1"
+  local desktop_user installer_source installer_temp permission_script status
   desktop_user="$(id -un)"
   installer_source="$app_dir/usr/share/sdeck"
   installer_temp="$(mktemp -d "${TMPDIR:-/tmp}/yasdec-uinput.XXXXXX")"
-  cleanup_installer() {
-    rm -rf -- "$installer_temp"
-  }
-  trap cleanup_installer EXIT
   install -m 0700 "$installer_source/install-uinput.sh" "$installer_temp/install-uinput.sh"
   install -m 0600 "$installer_source/70-sdeck-uinput.rules" "$installer_temp/70-sdeck-uinput.rules"
   install -m 0600 "$installer_source/sdeck-uinput.conf" "$installer_temp/sdeck-uinput.conf"
   permission_script="$installer_temp/install-uinput.sh"
-  arguments=("$desktop_user")
-  if [[ "$1" == "--remove-uinput" ]]; then
+  local arguments=("$desktop_user")
+  if [[ "$mode" == "remove" ]]; then
     arguments=("--remove" "$desktop_user")
   fi
   if command -v pkexec >/dev/null 2>&1; then
-    pkexec /usr/bin/bash "$permission_script" "${arguments[@]}"
-    exit $?
+    if pkexec /usr/bin/bash "$permission_script" "${arguments[@]}"; then status=0; else status=$?; fi
+  else
+    if sudo /usr/bin/bash "$permission_script" "${arguments[@]}"; then status=0; else status=$?; fi
   fi
-  sudo /usr/bin/bash "$permission_script" "${arguments[@]}"
-  exit $?
+  rm -rf -- "$installer_temp"
+  return "$status"
+}
+
+if [[ "$management_requested" == true ]]; then
+  if (( ${#unknown_arguments[@]} )); then
+    echo "Unknown option: ${unknown_arguments[0]}" >&2
+    exit 2
+  fi
+  if [[ "$install_user" == true && "$uninstall_user" == true ]] || \
+     [[ "$install_uinput" == true && "$remove_uinput" == true ]]; then
+    echo "Install and uninstall options cannot be used together." >&2
+    exit 2
+  fi
+  if [[ "$autostart" == true && "$install_user" != true ]]; then
+    echo "--autostart requires --install-user." >&2
+    exit 2
+  fi
+  if [[ "$EUID" -eq 0 ]]; then
+    echo "Run the AppImage without sudo; YASDEC elevates only the uinput installer." >&2
+    exit 2
+  fi
+
+  if [[ "$install_user" == true || "$uninstall_user" == true ]]; then
+    mode="install"
+    if [[ "$uninstall_user" == true ]]; then
+      mode="uninstall"
+    fi
+    user_arguments=()
+    if [[ "$autostart" == true ]]; then
+      user_arguments+=("--autostart")
+    fi
+    if [[ -z "${APPIMAGE:-}" ]] || [[ ! -f "${APPIMAGE:-}" ]]; then
+      echo "The original AppImage path is unavailable; run this command from the AppImage itself." >&2
+      exit 1
+    fi
+    /usr/bin/bash "$app_dir/usr/share/sdeck/install-appimage-user.sh" \
+      "$mode" "$APPIMAGE" "$app_dir/sdeck.desktop" "$app_dir/sdeck.svg" "${user_arguments[@]}"
+  fi
+
+  if [[ "$install_uinput" == true ]]; then
+    install_uinput_permissions install
+  fi
+  if [[ "$remove_uinput" == true ]]; then
+    install_uinput_permissions remove
+  fi
+  exit 0
 fi
 
 exec "$app_dir/usr/lib/sdeck/YASDEC" "$@"

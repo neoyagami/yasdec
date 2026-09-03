@@ -102,6 +102,13 @@ To start the controller automatically with the desktop session, use:
 ./YASDEC-x86_64.AppImage --install-user --autostart
 ```
 
+User installation, autostart, and `uinput` permissions may also be requested
+together, in any order:
+
+```bash
+./YASDEC-x86_64.AppImage --install-user --autostart --install-uinput
+```
+
 The AppImage is copied to `~/.local/share/yasdec` by default. The autostart
 entry launches it in background mode when a system tray is available. To remove
 the installed application and autostart entry while retaining personal

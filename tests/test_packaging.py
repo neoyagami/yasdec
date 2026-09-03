@@ -1,4 +1,5 @@
 import os
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -8,11 +9,49 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 INSTALLER = PROJECT_DIR / "packaging" / "install-appimage-user.sh"
+APP_RUN = PROJECT_DIR / "packaging" / "AppRun"
 DESKTOP_TEMPLATE = PROJECT_DIR / "packaging" / "sdeck.appimage.desktop"
 ICON = PROJECT_DIR / "assets" / "sdeck.svg"
 
 
 class AppImageUserInstallerTests(unittest.TestCase):
+    def test_apprun_accepts_combined_install_flags_in_any_order(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app_dir = root / "AppDir"
+            support = app_dir / "usr" / "share" / "sdeck"
+            support.mkdir(parents=True)
+            shutil.copy2(INSTALLER, support / "install-appimage-user.sh")
+            for name in ("install-uinput.sh", "70-sdeck-uinput.rules", "sdeck-uinput.conf"):
+                shutil.copy2(PROJECT_DIR / "packaging" / name, support / name)
+            shutil.copy2(DESKTOP_TEMPLATE, app_dir / "sdeck.desktop")
+            shutil.copy2(ICON, app_dir / "sdeck.svg")
+            source = root / "YASDEC-x86_64.AppImage"
+            source.write_bytes(b"fake-appimage")
+            source.chmod(0o755)
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            (fake_bin / "pkexec").symlink_to("/usr/bin/true")
+            environment = os.environ.copy()
+            environment.update({
+                "APPDIR": str(app_dir),
+                "APPIMAGE": str(source),
+                "XDG_DATA_HOME": str(root / "data"),
+                "XDG_CONFIG_HOME": str(root / "config"),
+                "PATH": f"{fake_bin}:{environment.get('PATH', '/usr/bin:/bin')}",
+            })
+
+            subprocess.run(
+                ["bash", str(APP_RUN), "--install-uinput", "--install-user", "--autostart"],
+                check=True,
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertTrue((root / "data" / "yasdec" / "YASDEC-x86_64.AppImage").is_file())
+            self.assertTrue((root / "data" / "applications" / "sdeck.desktop").is_file())
+            self.assertTrue((root / "config" / "autostart" / "sdeck.desktop").is_file())
+
     def test_install_autostart_and_uninstall(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
