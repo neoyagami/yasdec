@@ -108,11 +108,16 @@ class KeyConfig:
     spectrum_fps: int = 8
     spectrum_preview: bool = False
     spectrum_grid_size: int = 1
+    spectrum_auto_scale: bool = False
+    spectrum_auto_stop: bool = False
+    spectrum_silence_seconds: int = 30
     vu_operation: str = "start"
     vu_kind: str = "sink"
     vu_target: str = ""
     vu_fps: int = 12
     vu_preview: bool = False
+    vu_auto_stop: bool = False
+    vu_silence_seconds: int = 30
     vu_color_start: str = "#18f2a4"
     vu_color_end: str = "#ff3b81"
     multi_action_in: list[MultiActionStep] = field(default_factory=list)
@@ -133,6 +138,11 @@ class KeyConfig:
             values["spectrum_grid_size"] = max(1, min(3, int(values.get("spectrum_grid_size", 1))))
         except (TypeError, ValueError):
             values["spectrum_grid_size"] = 1
+        for name in ("spectrum_silence_seconds", "vu_silence_seconds"):
+            try:
+                values[name] = max(5, min(3600, int(values.get(name, 30))))
+            except (TypeError, ValueError):
+                values[name] = 30
         if values.get("media_control", "PLAYPAUSE") not in MEDIA_CONTROLS:
             values["media_control"] = "PLAYPAUSE"
         return cls(**values)

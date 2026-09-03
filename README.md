@@ -265,6 +265,9 @@ Columns represent logarithmic frequency bands and rows represent intensity.
 The block style can be solid, a 2 × 2 LCD grid, or a 3 × 3 LCD grid. The 3 × 3
 style turns every key into nine small retro colored cells and samples three
 frequency bands across each physical key.
+Spectrum levels use a fixed −60 dBFS to 0 dBFS scale by default, so the display
+represents the actual signal level. **Automatic gain** can be enabled per key
+when consistently filling the available height is preferred instead.
 Recommended frame rates are 12 FPS for Mini, 8 FPS for Original/MK.2, 10 FPS
 for Neo, and 4 FPS for XL. Rendering happens in a worker thread, retains only
 the newest pending frame, and skips unchanged keys.
@@ -284,6 +287,11 @@ The start and end colors of the retro neon gradient are configured on the
 assigned key. With **Preview on this key** enabled, switching off the full-deck
 view keeps stereo capture running and replaces that key's icon with a compact
 two-channel meter.
+
+Both visualizers provide an optional **Auto-stop when silent** setting with a
+configurable 5–3600 second delay. It uses absolute signal level, stops both the
+full-screen view and any mini preview, and remains stopped until its start key
+is pressed again.
 
 ![Horizontal stereo VU meter](docs/screenshots/yasdec-vu-stereo.png)
 

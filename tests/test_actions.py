@@ -28,7 +28,7 @@ class SpectrumToggleTests(unittest.TestCase):
         runner._timer.stop()
         runner.audio.capture_device = lambda *_args: "monitor.test"
         starts: list[int] = []
-        runner.spectrum.start = lambda _device, bands: starts.append(bands) or True
+        runner.spectrum.start = lambda _device, bands, _auto_scale=False: starts.append(bands) or True
         runner.spectrum.stop = lambda: None
         key = KeyConfig(
             action=ACTION_SPECTRUM,
@@ -45,6 +45,38 @@ class SpectrumToggleTests(unittest.TestCase):
         runner.sync_spectrum_preview()
         self.assertEqual(starts, [5, 15])
         self.assertEqual(runner._spectrum_band_count, 15)
+        runner.close()
+
+    def test_silence_auto_stop_does_not_restart_preview_until_pressed(self) -> None:
+        runner = ActionRunner()
+        runner.audio.timer.stop()
+        runner._timer.stop()
+        runner.audio.capture_device = lambda *_args: "monitor.test"
+        starts: list[str] = []
+        runner.spectrum.start = lambda device, *_args: starts.append(device) or True
+        runner.spectrum.stop = lambda: None
+        key = KeyConfig(
+            action=ACTION_SPECTRUM,
+            spectrum_target="test",
+            spectrum_preview=True,
+            spectrum_auto_stop=True,
+            spectrum_silence_seconds=5,
+            toggle=True,
+        )
+        runner._visible_keys = [key]
+        runner._spectrum_columns = 5
+
+        runner.trigger(0, key)
+        runner._spectrum_last_activity -= 6
+        runner._check_visualizer_inactivity()
+        self.assertFalse(runner.spectrum_active)
+        self.assertFalse(key.active)
+
+        runner.sync_spectrum_preview()
+        self.assertEqual(starts, ["monitor.test"])
+        runner.trigger(0, key)
+        self.assertEqual(starts, ["monitor.test", "monitor.test"])
+        self.assertTrue(runner.spectrum_active)
         runner.close()
 
     def test_preview_keeps_capture_after_fullscreen_is_toggled_off(self) -> None:
@@ -80,6 +112,29 @@ class SpectrumToggleTests(unittest.TestCase):
 
 
 class StereoVuToggleTests(unittest.TestCase):
+    def test_vu_silence_auto_stop_disables_capture(self) -> None:
+        runner = ActionRunner()
+        runner.audio.timer.stop()
+        runner._timer.stop()
+        runner.audio.capture_device = lambda *_args: "monitor.test"
+        runner.vu.start = lambda _device: True
+        runner.vu.stop = lambda: None
+        key = KeyConfig(
+            action=ACTION_VU,
+            vu_target="test",
+            vu_auto_stop=True,
+            vu_silence_seconds=5,
+            toggle=True,
+        )
+        runner._visible_keys = [key]
+
+        runner.trigger(0, key)
+        runner._vu_last_activity -= 6
+        runner._check_visualizer_inactivity()
+        self.assertFalse(runner.vu_active)
+        self.assertFalse(key.active)
+        runner.close()
+
     def test_preview_keeps_stereo_capture_after_fullscreen_toggle(self) -> None:
         runner = ActionRunner()
         runner.audio.timer.stop()

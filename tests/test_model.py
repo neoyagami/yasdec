@@ -77,12 +77,18 @@ class ConfigTests(unittest.TestCase):
             key.spectrum_fps = 12
             key.spectrum_preview = True
             key.spectrum_grid_size = 3
+            key.spectrum_auto_scale = True
+            key.spectrum_auto_stop = True
+            key.spectrum_silence_seconds = 45
             config.save(path)
             restored = AppConfig.load(path).current().keys[0]
             self.assertEqual((restored.glyph, restored.active_glyph), ("●", "■"))
             self.assertEqual((restored.spectrum_target, restored.spectrum_fps), ("output.test", 12))
             self.assertTrue(restored.spectrum_preview)
             self.assertEqual(restored.spectrum_grid_size, 3)
+            self.assertTrue(restored.spectrum_auto_scale)
+            self.assertTrue(restored.spectrum_auto_stop)
+            self.assertEqual(restored.spectrum_silence_seconds, 45)
 
     def test_round_trip_preserves_stereo_vu_configuration(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -93,6 +99,8 @@ class ConfigTests(unittest.TestCase):
             key.vu_target = "output.test"
             key.vu_fps = 14
             key.vu_preview = True
+            key.vu_auto_stop = True
+            key.vu_silence_seconds = 60
             key.vu_color_start = "#00ff80"
             key.vu_color_end = "#ff0080"
             config.save(path)
@@ -100,6 +108,8 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(restored.action, "vu")
             self.assertEqual((restored.vu_target, restored.vu_fps), ("output.test", 14))
             self.assertTrue(restored.vu_preview)
+            self.assertTrue(restored.vu_auto_stop)
+            self.assertEqual(restored.vu_silence_seconds, 60)
             self.assertEqual((restored.vu_color_start, restored.vu_color_end), ("#00ff80", "#ff0080"))
 
     def test_round_trip_preserves_key_colors(self) -> None:

@@ -14,6 +14,7 @@ from .process_environment import external_process_environment
 
 class SpectrumController(QObject):
     levels_changed = Signal(object)
+    activity_changed = Signal(float)
     status = Signal(str, bool)
     ended = Signal()
 
@@ -26,8 +27,9 @@ class SpectrumController(QObject):
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._peak = 1.0
+        self._auto_scale = False
 
-    def start(self, device: str, band_count: int) -> bool:
+    def start(self, device: str, band_count: int, auto_scale: bool = False) -> bool:
         self.stop()
         if not device:
             self.status.emit(tr("Select a valid audio input or output"), False)
@@ -49,6 +51,7 @@ class SpectrumController(QObject):
             return False
         self._stop.clear()
         self._peak = 1.0
+        self._auto_scale = auto_scale
         self._thread = threading.Thread(target=self._capture, args=(max(1, band_count),), name="sdeck-spectrum", daemon=True)
         self._thread.start()
         self.status.emit(tr("Spectrum analyzer active"), True)
@@ -77,10 +80,14 @@ class SpectrumController(QObject):
             if len(data) != byte_count:
                 break
             samples = struct.unpack(f"<{self.SAMPLE_COUNT}h", data)
+            self.activity_changed.emit(pcm_signal_level(samples))
             powers = [goertzel(samples, coefficient) for coefficient in coefficients]
-            frame_peak = max(powers, default=1.0)
-            self._peak = max(frame_peak, self._peak * 0.94, 1.0)
-            levels = [min(1.0, max(0.0, math.log10(1.0 + power) / math.log10(1.0 + self._peak))) for power in powers]
+            if self._auto_scale:
+                frame_peak = max(powers, default=1.0)
+                self._peak = max(frame_peak, self._peak * 0.94, 1.0)
+                levels = [min(1.0, max(0.0, math.log10(1.0 + power) / math.log10(1.0 + self._peak))) for power in powers]
+            else:
+                levels = [spectrum_power_level(power, self.SAMPLE_COUNT) for power in powers]
             self.levels_changed.emit(levels)
         if not self._stop.is_set():
             self.status.emit(tr("Analyzer capture ended"), False)
@@ -176,6 +183,28 @@ def stereo_vu_levels(samples: tuple[int, ...]) -> tuple[float, float]:
         dbfs = 20.0 * math.log10(max(1.0, rms) / 32768.0)
         result.append(max(0.0, min(1.0, (dbfs + 48.0) / 48.0)))
     return (result[0], result[1])
+
+
+def pcm_signal_level(samples: tuple[int, ...], floor_db: float = -60.0) -> float:
+    """Map PCM RMS to a stable dBFS activity level without auto-gain."""
+    if not samples:
+        return 0.0
+    rms = math.sqrt(sum(float(value) * value for value in samples) / len(samples))
+    dbfs = 20.0 * math.log10(max(1.0, rms) / 32768.0)
+    floor = min(-1.0, float(floor_db))
+    return max(0.0, min(1.0, (dbfs - floor) / -floor))
+
+
+def spectrum_power_level(power: float, sample_count: int, floor_db: float = -60.0) -> float:
+    """Map Hann-windowed Goertzel power to a fixed dBFS display level."""
+    if power <= 0.0 or sample_count <= 0:
+        return 0.0
+    # A Hann window has a coherent gain of roughly 0.5.  Recover the tone
+    # amplitude from the DFT magnitude before converting it to dBFS.
+    amplitude = 4.0 * math.sqrt(power) / sample_count
+    dbfs = 20.0 * math.log10(max(1.0, amplitude) / 32768.0)
+    floor = min(-1.0, float(floor_db))
+    return max(0.0, min(1.0, (dbfs - floor) / -floor))
 
 
 def log_frequencies(count: int, low: float, high: float) -> list[float]:

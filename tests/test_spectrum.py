@@ -1,10 +1,20 @@
 import math
 import unittest
 
-from sdeck.spectrum import SpectrumController, capture_command, goertzel, log_frequencies, stereo_vu_levels
+from sdeck.spectrum import SpectrumController, capture_command, goertzel, log_frequencies, spectrum_power_level, stereo_vu_levels
 
 
 class SpectrumMathTests(unittest.TestCase):
+    def test_fixed_spectrum_scale_tracks_dbfs_without_auto_gain(self) -> None:
+        sample_rate = 16_000
+        sample_count = 1024
+        frequency = 1000.0
+        coefficient = 2.0 * math.cos(2.0 * math.pi * frequency / sample_rate)
+        loud = tuple(round(32767 * math.sin(2.0 * math.pi * frequency * index / sample_rate)) for index in range(sample_count))
+        quiet = tuple(round(33 * math.sin(2.0 * math.pi * frequency * index / sample_rate)) for index in range(sample_count))
+        self.assertGreater(spectrum_power_level(goertzel(loud, coefficient), sample_count), 0.98)
+        self.assertLess(spectrum_power_level(goertzel(quiet, coefficient), sample_count), 0.05)
+
     def test_stereo_vu_keeps_left_and_right_channels_independent(self) -> None:
         samples = tuple(value for _ in range(200) for value in (20_000, 500))
         left, right = stereo_vu_levels(samples)

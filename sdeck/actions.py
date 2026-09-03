@@ -45,11 +45,16 @@ class ActionRunner(QObject):
         self.spectrum_key: KeyConfig | None = None
         self._spectrum_device = ""
         self._spectrum_band_count = 0
+        self._spectrum_auto_scale = False
+        self._spectrum_last_activity = time.monotonic()
+        self._spectrum_silence_stopped: set[int] = set()
         self.vu = StereoVuController(self)
         self.vu_active = False
         self.vu_fullscreen = False
         self.vu_key: KeyConfig | None = None
         self._vu_device = ""
+        self._vu_last_activity = time.monotonic()
+        self._vu_silence_stopped: set[int] = set()
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
         self._timer.timeout.connect(self._emit_timer_updates)
@@ -66,9 +71,10 @@ class ActionRunner(QObject):
         self.obs.connection_changed.connect(self.obs_connection_changed)
         self.obs.catalog_changed.connect(self.obs_catalog_changed)
         self.spectrum.levels_changed.connect(self.spectrum_levels)
+        self.spectrum.activity_changed.connect(self._spectrum_activity_changed)
         self.spectrum.status.connect(self.status)
         self.spectrum.ended.connect(self._spectrum_ended)
-        self.vu.levels_changed.connect(self.vu_levels)
+        self.vu.levels_changed.connect(self._vu_levels_changed)
         self.vu.status.connect(self.status)
         self.vu.ended.connect(self._vu_ended)
 
@@ -130,20 +136,29 @@ class ActionRunner(QObject):
                         self._stop_spectrum()
                     self._sync_visual_previews()
                     return
+                self._spectrum_silence_stopped.discard(id(key))
+                self._spectrum_last_activity = time.monotonic()
                 if self.vu_active:
                     self._stop_vu()
                 device = self.audio.capture_device(key.spectrum_kind, key.spectrum_target)
                 band_count = self._spectrum_columns * max(1, min(3, key.spectrum_grid_size))
-                if self.spectrum_active and self.spectrum_key is key and device == self._spectrum_device and band_count == self._spectrum_band_count:
+                if (
+                    self.spectrum_active
+                    and self.spectrum_key is key
+                    and device == self._spectrum_device
+                    and band_count == self._spectrum_band_count
+                    and key.spectrum_auto_scale == self._spectrum_auto_scale
+                ):
                     executed = True
                 else:
-                    executed = self.spectrum.start(device, band_count)
+                    executed = self.spectrum.start(device, band_count, key.spectrum_auto_scale)
                 if executed:
                     self.spectrum_active = True
                     self.spectrum_fullscreen = True
                     self.spectrum_key = key
                     self._spectrum_device = device
                     self._spectrum_band_count = band_count
+                    self._spectrum_auto_scale = key.spectrum_auto_scale
                     self._set_state(key, True)
                     self.spectrum_mode_changed.emit(True, max(1, min(20, key.spectrum_fps)))
                     self._set_spectrum_key_states(index)
@@ -164,6 +179,8 @@ class ActionRunner(QObject):
                         self._stop_vu()
                     self._sync_visual_previews()
                     return
+                self._vu_silence_stopped.discard(id(key))
+                self._vu_last_activity = time.monotonic()
                 if self.spectrum_active:
                     self._stop_spectrum()
                 device = self.audio.capture_device(key.vu_kind, key.vu_target)
@@ -351,6 +368,7 @@ class ActionRunner(QObject):
         socket.open(QUrl(url))
 
     def _emit_timer_updates(self) -> None:
+        self._check_visualizer_inactivity()
         for index, key in enumerate(self._visible_keys):
             if key.active and key.show_timer:
                 self.key_changed.emit(index)
@@ -360,6 +378,43 @@ class ActionRunner(QObject):
             if key.action == ACTION_AUDIO and key.audio_kind == kind and key.audio_target == target:
                 self._set_state(key, muted)
                 self.key_changed.emit(index)
+
+    def _spectrum_activity_changed(self, level: float) -> None:
+        if level > 0.08:
+            self._spectrum_last_activity = time.monotonic()
+            if self.spectrum_key is not None:
+                self._spectrum_silence_stopped.discard(id(self.spectrum_key))
+
+    def _vu_levels_changed(self, levels: object) -> None:
+        values = tuple(levels) if isinstance(levels, (tuple, list)) else (0.0, 0.0)
+        if max((float(value) for value in values), default=0.0) > 0.01:
+            self._vu_last_activity = time.monotonic()
+            if self.vu_key is not None:
+                self._vu_silence_stopped.discard(id(self.vu_key))
+        self.vu_levels.emit(levels)
+
+    def _check_visualizer_inactivity(self) -> None:
+        now = time.monotonic()
+        spectrum_key = self.spectrum_key
+        if (
+            self.spectrum_active
+            and spectrum_key is not None
+            and spectrum_key.spectrum_auto_stop
+            and now - self._spectrum_last_activity >= spectrum_key.spectrum_silence_seconds
+        ):
+            self._spectrum_silence_stopped.add(id(spectrum_key))
+            self._stop_spectrum()
+            self.status.emit(tr("Spectrum analyzer stopped after silence"), True)
+        vu_key = self.vu_key
+        if (
+            self.vu_active
+            and vu_key is not None
+            and vu_key.vu_auto_stop
+            and now - self._vu_last_activity >= vu_key.vu_silence_seconds
+        ):
+            self._vu_silence_stopped.add(id(vu_key))
+            self._stop_vu()
+            self.status.emit(tr("VU meter stopped after silence"), True)
 
     def _obs_state_changed(self, operation: str, scene: str, target: str, active: bool) -> None:
         for index, key in enumerate(self._visible_keys):
@@ -413,35 +468,53 @@ class ActionRunner(QObject):
             band_count = self._spectrum_columns * max(1, min(3, candidate.spectrum_grid_size))
             if not device:
                 return
-            if device == self._spectrum_device and band_count == self._spectrum_band_count:
+            if (
+                device == self._spectrum_device
+                and band_count == self._spectrum_band_count
+                and candidate.spectrum_auto_scale == self._spectrum_auto_scale
+            ):
                 self.spectrum_mode_changed.emit(True, max(1, min(20, candidate.spectrum_fps)))
                 return
-            if self.spectrum.start(device, band_count):
+            if self.spectrum.start(device, band_count, candidate.spectrum_auto_scale):
                 self.spectrum_active = True
                 self._spectrum_device = device
                 self._spectrum_band_count = band_count
+                self._spectrum_auto_scale = candidate.spectrum_auto_scale
                 self.spectrum_mode_changed.emit(True, max(1, min(20, candidate.spectrum_fps)))
             return
         candidate = next((
             key for key in self._visible_keys
-            if key.action == ACTION_SPECTRUM and key.spectrum_operation == "start" and key.spectrum_preview
+            if key.action == ACTION_SPECTRUM
+            and key.spectrum_operation == "start"
+            and key.spectrum_preview
+            and (not key.spectrum_auto_stop or id(key) not in self._spectrum_silence_stopped)
         ), None)
         if candidate is None:
             if self.spectrum_active:
                 self._stop_spectrum()
             return
+        if not candidate.spectrum_auto_stop:
+            self._spectrum_silence_stopped.discard(id(candidate))
         device = self.audio.capture_device(candidate.spectrum_kind, candidate.spectrum_target)
         band_count = self._spectrum_columns * max(1, min(3, candidate.spectrum_grid_size))
         if not device:
             return
-        if self.spectrum_active and self.spectrum_key is candidate and device == self._spectrum_device and band_count == self._spectrum_band_count:
+        if (
+            self.spectrum_active
+            and self.spectrum_key is candidate
+            and device == self._spectrum_device
+            and band_count == self._spectrum_band_count
+            and candidate.spectrum_auto_scale == self._spectrum_auto_scale
+        ):
             return
-        if self.spectrum.start(device, band_count):
+        if self.spectrum.start(device, band_count, candidate.spectrum_auto_scale):
+            self._spectrum_last_activity = time.monotonic()
             self.spectrum_active = True
             self.spectrum_fullscreen = False
             self.spectrum_key = candidate
             self._spectrum_device = device
             self._spectrum_band_count = band_count
+            self._spectrum_auto_scale = candidate.spectrum_auto_scale
             self._set_spectrum_key_states()
             self.spectrum_mode_changed.emit(True, max(1, min(20, candidate.spectrum_fps)))
 
@@ -468,18 +541,24 @@ class ActionRunner(QObject):
             return
         candidate = next((
             key for key in self._visible_keys
-            if key.action == ACTION_VU and key.vu_operation == "start" and key.vu_preview
+            if key.action == ACTION_VU
+            and key.vu_operation == "start"
+            and key.vu_preview
+            and (not key.vu_auto_stop or id(key) not in self._vu_silence_stopped)
         ), None)
         if candidate is None:
             if self.vu_active:
                 self._stop_vu()
             return
+        if not candidate.vu_auto_stop:
+            self._vu_silence_stopped.discard(id(candidate))
         device = self.audio.capture_device(candidate.vu_kind, candidate.vu_target)
         if not device:
             return
         if self.vu_active and self.vu_key is candidate and device == self._vu_device:
             return
         if self.vu.start(device):
+            self._vu_last_activity = time.monotonic()
             self.vu_active = True
             self.vu_fullscreen = False
             self.vu_key = candidate
@@ -495,6 +574,7 @@ class ActionRunner(QObject):
         self.spectrum_key = None
         self._spectrum_device = ""
         self._spectrum_band_count = 0
+        self._spectrum_auto_scale = False
         if active_key is not None:
             self._set_state(active_key, False)
         self._set_spectrum_key_states()
@@ -507,6 +587,7 @@ class ActionRunner(QObject):
         self.spectrum_key = None
         self._spectrum_device = ""
         self._spectrum_band_count = 0
+        self._spectrum_auto_scale = False
         if active_key is not None:
             self._set_state(active_key, False)
         self._set_spectrum_key_states()
