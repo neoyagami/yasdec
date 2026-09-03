@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QProcess, QStandardPaths, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QProcess, QTimer, QUrl, Signal
 from PySide6.QtWebSockets import QWebSocket
 
 from .audio import AudioController
-from .applications import desktop_activation_uri, desktop_exec
+from .applications import desktop_launch_command
 from .i18n import tr
 from .keyboard import ShortcutError, VirtualKeyboard
 from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MEDIA, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep
@@ -34,6 +35,7 @@ class ActionRunner(QObject):
         self._processes: set[QProcess] = set()
         self._multi_running: set[int] = set()
         self._multi_timers: set[QTimer] = set()
+        self._application_launch_times: dict[str, float] = {}
         self.keyboard = VirtualKeyboard()
         self.audio = AudioController(self)
         self.obs = ObsManager(self)
@@ -295,19 +297,17 @@ class ActionRunner(QObject):
         if not path.is_file():
             self.status.emit(tr("The application shortcut no longer exists"), False)
             return False
-        gio = QStandardPaths.findExecutable("gio")
-        if gio:
-            activation_uri = desktop_activation_uri(path)
-            if activation_uri:
-                program, arguments = gio, ["open", activation_uri]
-            else:
-                program, arguments = gio, ["launch", str(path)]
-        else:
-            launch = desktop_exec(path)
-            if launch is None:
-                self.status.emit(tr("The application shortcut does not contain a valid command"), False)
-                return False
-            program, arguments = launch
+        now = time.monotonic()
+        identity = str(path.resolve())
+        if now - self._application_launch_times.get(identity, 0.0) < 3.0:
+            self.status.emit(tr("Opening {name}", name=path.stem), True)
+            return True
+        launch = desktop_launch_command(path)
+        if launch is None:
+            self.status.emit(tr("The application shortcut does not contain a valid command"), False)
+            return False
+        program, arguments = launch
+        self._application_launch_times[identity] = now
         process = QProcess(self)
         process.setProcessEnvironment(external_qprocess_environment())
         process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)

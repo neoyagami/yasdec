@@ -20,6 +20,14 @@ class ExternalProcessEnvironmentTests(unittest.TestCase):
         })
         self.assertEqual(environment, {"PATH": "/usr/bin"})
 
+    def test_removes_stale_single_use_activation_identifiers(self) -> None:
+        environment = external_process_environment({
+            "PATH": "/usr/bin",
+            "XDG_ACTIVATION_TOKEN": "already-consumed-wayland-token",
+            "DESKTOP_STARTUP_ID": "already-consumed-x11-token",
+        })
+        self.assertEqual(environment, {"PATH": "/usr/bin"})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,11 +13,6 @@ from PySide6.QtGui import QIcon
 from .i18n import language_code
 
 
-_ACTIVATION_URIS = {
-    "discord": "discord://-/channels/@me",
-}
-
-
 @dataclass(frozen=True)
 class DesktopApplication:
     desktop_id: str
@@ -140,24 +135,50 @@ def desktop_exec(path: Path) -> tuple[str, list[str]] | None:
     return (result[0], result[1:]) if result else None
 
 
-def desktop_activation_uri(path: Path) -> str:
-    """Return an URI that asks a running single-instance app to show itself.
-
-    Only schemes with a known safe landing page belong here.  An empty URI is
-    not universally valid, so unknown handlers keep the standard desktop-entry
-    launch path.
-    """
-    parser = _read_desktop_file(path)
-    if parser is None or not parser.has_section("Desktop Entry"):
-        return ""
-    mime_types = parser["Desktop Entry"].get("MimeType", "").split(";")
-    for mime_type in mime_types:
-        prefix = "x-scheme-handler/"
-        if mime_type.startswith(prefix):
-            scheme = mime_type[len(prefix) :].strip().casefold()
-            if scheme in _ACTIVATION_URIS:
-                return _ACTIVATION_URIS[scheme]
+def desktop_file_id(path: Path) -> str:
+    """Return the registered freedesktop ID for an application shortcut."""
+    resolved = path.resolve()
+    directories = QStandardPaths.standardLocations(QStandardPaths.StandardLocation.ApplicationsLocation)
+    for directory_name in directories:
+        directory = Path(directory_name)
+        try:
+            relative = resolved.relative_to(directory.resolve())
+        except (OSError, ValueError):
+            continue
+        return str(relative).replace(os.sep, "-")
+    # Flatpak exports may be absent from QStandardPaths when YASDEC was
+    # autostarted with a reduced XDG_DATA_DIRS.  Their layout still follows the
+    # freedesktop share/applications convention.
+    parts = resolved.parts
+    for index in range(len(parts) - 2, 0, -1):
+        if parts[index - 1 : index + 1] == ("share", "applications"):
+            return "-".join(parts[index + 1 :])
     return ""
+
+
+def desktop_launch_command(path: Path, current_desktop: str | None = None) -> tuple[str, list[str]] | None:
+    """Choose the native desktop launcher, with freedesktop fallbacks."""
+    desktop_id = desktop_file_id(path)
+    desktop_names = {
+        name.casefold()
+        for name in (current_desktop if current_desktop is not None else os.environ.get("XDG_CURRENT_DESKTOP", ""))
+        .replace(";", ":")
+        .split(":")
+        if name
+    }
+    if desktop_id and "kde" in desktop_names:
+        for executable in ("kstart6", "kstart", "kstart5"):
+            program = QStandardPaths.findExecutable(executable)
+            if program:
+                return program, ["--application", desktop_id.removesuffix(".desktop")]
+    if desktop_id and "gnome" in desktop_names:
+        program = QStandardPaths.findExecutable("gtk-launch")
+        if program:
+            return program, [desktop_id.removesuffix(".desktop")]
+    gio = QStandardPaths.findExecutable("gio")
+    if gio:
+        return gio, ["launch", str(path)]
+    return desktop_exec(path)
 
 
 def _read_desktop_file(path: Path) -> configparser.ConfigParser | None:
