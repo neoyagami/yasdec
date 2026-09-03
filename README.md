@@ -88,6 +88,11 @@ APPIMAGETOOL=/path/to/appimagetool ./packaging/build-appimage.sh
 
 The build produces `dist/YASDEC-x86_64.AppImage` and a matching SHA-256 file.
 On Bazzite, Gear Lever can integrate the AppImage with the application menu.
+To list every command built into the AppImage, run:
+
+```bash
+./YASDEC-x86_64.AppImage --help
+```
 
 YASDEC can also install its AppImage into the current user account and add it
 to the application menu without root privileges:
@@ -337,6 +342,11 @@ desktop application as root.
 Sign out and back in once after installation. YASDEC then runs without root
 privileges. The installer grants only `/dev/uinput` access to the dedicated
 `sdeck-input` group; it does not grant access to physical keyboard events.
+The permissions can be removed later with:
+
+```bash
+./YASDEC-x86_64.AppImage --remove-uinput
+```
 
 ### Multi actions
 

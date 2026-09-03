@@ -9,6 +9,7 @@ autostart=false
 install_uinput=false
 remove_uinput=false
 management_requested=false
+show_help=false
 unknown_arguments=()
 
 for argument in "$@"; do
@@ -18,9 +19,51 @@ for argument in "$@"; do
     --autostart) autostart=true; management_requested=true ;;
     --install-uinput) install_uinput=true; management_requested=true ;;
     --remove-uinput) remove_uinput=true; management_requested=true ;;
+    -h|--help) show_help=true ;;
     *) unknown_arguments+=("$argument") ;;
   esac
 done
+
+print_help() {
+  cat <<'EOF'
+YASDEC — Yet Another Stream Deck Controller
+
+Usage:
+  YASDEC-x86_64.AppImage [OPTION...]
+
+Run options:
+  (no options)       Open YASDEC normally
+  --background       Start minimized to the system tray
+
+User installation:
+  --install-user     Install this AppImage for the current user and add it to
+                     the desktop application menu
+  --autostart        Start YASDEC with the desktop session; use together with
+                     --install-user
+  --uninstall-user   Remove the user installation, menu entry, and autostart
+                     entry; personal configuration is preserved
+
+Virtual keyboard:
+  --install-uinput   Install uinput permissions for global and media keys;
+                     authentication is requested and a new login is required
+  --remove-uinput    Remove the uinput permissions installed by YASDEC;
+                     authentication is requested
+
+Help:
+  -h, --help         Show this help and exit
+
+Installation options may be combined, for example:
+  ./YASDEC-x86_64.AppImage --install-user --autostart --install-uinput
+
+Run the AppImage as your regular desktop user. YASDEC elevates only the small
+uinput permission installer when required; do not run the AppImage with sudo.
+EOF
+}
+
+if [[ "$show_help" == true ]]; then
+  print_help
+  exit 0
+fi
 
 install_uinput_permissions() {
   local mode="$1"

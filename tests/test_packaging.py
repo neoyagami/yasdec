@@ -15,6 +15,24 @@ ICON = PROJECT_DIR / "assets" / "sdeck.svg"
 
 
 class AppImageUserInstallerTests(unittest.TestCase):
+    def test_apprun_help_lists_management_and_runtime_options(self) -> None:
+        result = subprocess.run(
+            ["bash", str(APP_RUN), "--help"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        for option in (
+            "--background",
+            "--install-user",
+            "--autostart",
+            "--uninstall-user",
+            "--install-uinput",
+            "--remove-uinput",
+        ):
+            self.assertIn(option, result.stdout)
+        self.assertIn("do not run the AppImage with sudo", result.stdout)
+
     def test_apprun_accepts_combined_install_flags_in_any_order(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
