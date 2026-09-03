@@ -755,7 +755,8 @@ class MainWindow(QMainWindow):
         details = QLabel(
             "<div style='text-align:center'>"
             "Yet Another Stream Deck Controller<br><br>"
-            f"{tr('Version {version}', version='0.1.0')} · 2026<br>"
+            f"{tr('Version {version}', version='0.1.0')} · neoyagami · 2026<br>"
+            f"{tr('Built with AI tools')}<br>"
             f"{tr('Licensed under GNU GPLv3 or later')}<br><br>"
             "<a href='https://github.com/neoyagami/yasdec'>"
             f"{tr('Download and source code')}</a>"
