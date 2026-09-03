@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import __version__
 from .actions import ActionRunner, elapsed_text
 from .api import ApiServer
 from .dialogs import ApiSettingsDialog, ObsSettingsDialog
@@ -734,6 +735,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr("Could not save configuration: {error}", error=exc), 5000)
 
     def show_from_tray(self) -> None:
+        self.tray_available = QSystemTrayIcon.isSystemTrayAvailable()
         self.show()
         self.raise_()
         self.activateWindow()
@@ -755,7 +757,7 @@ class MainWindow(QMainWindow):
         details = QLabel(
             "<div style='text-align:center'>"
             "Yet Another Stream Deck Controller<br><br>"
-            f"{tr('Version {version}', version='0.1.0')} · neoyagami · 2026<br>"
+            f"{tr('Version {version}', version=__version__)} · neoyagami · 2026<br>"
             f"{tr('Built with AI tools')}<br>"
             f"{tr('Licensed under GNU GPLv3 or later')}<br><br>"
             "<a href='https://github.com/neoyagami/yasdec'>"

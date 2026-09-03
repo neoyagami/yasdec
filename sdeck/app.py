@@ -10,6 +10,7 @@ from PySide6.QtCore import QStandardPaths, QTimer
 from PySide6.QtGui import QColor, QIcon, QPalette
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
+from . import __version__
 from .window import MainWindow
 from .i18n import set_language, tr
 from .model import AppConfig
@@ -82,6 +83,7 @@ def main() -> int:
     app = QApplication(qt_arguments)
     app.setApplicationName("YASDEC")
     app.setApplicationDisplayName("YASDEC — Yet Another Stream Deck Controller")
+    app.setApplicationVersion(__version__)
     app.setOrganizationName("YASDEC")
     config_path = data_dir() / "config.json"
     set_language(AppConfig.load(config_path).language)
@@ -91,14 +93,17 @@ def main() -> int:
     icon = QIcon(str(resource_path("sdeck.svg")))
     app.setWindowIcon(icon)
     window = MainWindow(config_path, icon)
-    if not background or not window.tray_available:
+    # Autostart can run before Plasma/GNOME publishes the system tray.  Qt will
+    # attach the already-visible QSystemTrayIcon when the tray appears; do not
+    # flash the main window while the desktop session is still starting.
+    if not background:
         window.show()
     signal.signal(signal.SIGINT, lambda *_args: window.quit_app())
     signal_timer = QTimer()
     signal_timer.setInterval(250)
     signal_timer.timeout.connect(lambda: None)
     signal_timer.start()
-    if not QSystemTrayIcon.isSystemTrayAvailable():
+    if not background and not QSystemTrayIcon.isSystemTrayAvailable():
         window.statusBar().showMessage(tr("The desktop does not provide a system tray; closing the window will end the visual session."))
     return app.exec()
 

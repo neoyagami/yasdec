@@ -137,7 +137,7 @@ following checks on Ubuntu 22.04 with Python 3.11:
 6. Uploads the AppImage and its `.sha256` file as the
    `YASDEC-AppImage-x86_64` workflow artifact.
 
-Pushing a tag matching `v*`—for example `v0.1.0`—also creates or updates the
+Pushing a tag matching `v*`—for example `v1.0.0`—also creates or updates the
 corresponding GitHub Release and attaches both generated files. The workflow
 uses the versioned AppImage `appimagetool` 1.9.1 release rather than the older
 obsolete AppImageKit build, and verifies the downloaded tool against its pinned

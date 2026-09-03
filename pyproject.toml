@@ -1,6 +1,6 @@
 [project]
 name = "sdeck"
-version = "0.1.0"
+version = "1.0.0"
 description = "YASDEC — Yet Another Stream Deck Controller"
 requires-python = ">=3.11"
 license = "GPL-3.0-or-later"
