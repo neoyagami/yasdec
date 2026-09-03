@@ -13,6 +13,11 @@ from PySide6.QtGui import QIcon
 from .i18n import language_code
 
 
+_ACTIVATION_URIS = {
+    "discord": "discord://-/channels/@me",
+}
+
+
 @dataclass(frozen=True)
 class DesktopApplication:
     desktop_id: str
@@ -133,6 +138,26 @@ def desktop_exec(path: Path) -> tuple[str, list[str]] | None:
         token = token.replace("\0", "%")
         result.append(token)
     return (result[0], result[1:]) if result else None
+
+
+def desktop_activation_uri(path: Path) -> str:
+    """Return an URI that asks a running single-instance app to show itself.
+
+    Only schemes with a known safe landing page belong here.  An empty URI is
+    not universally valid, so unknown handlers keep the standard desktop-entry
+    launch path.
+    """
+    parser = _read_desktop_file(path)
+    if parser is None or not parser.has_section("Desktop Entry"):
+        return ""
+    mime_types = parser["Desktop Entry"].get("MimeType", "").split(";")
+    for mime_type in mime_types:
+        prefix = "x-scheme-handler/"
+        if mime_type.startswith(prefix):
+            scheme = mime_type[len(prefix) :].strip().casefold()
+            if scheme in _ACTIVATION_URIS:
+                return _ACTIVATION_URIS[scheme]
+    return ""
 
 
 def _read_desktop_file(path: Path) -> configparser.ConfigParser | None:

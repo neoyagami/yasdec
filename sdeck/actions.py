@@ -8,7 +8,7 @@ from PySide6.QtCore import QObject, QProcess, QStandardPaths, QTimer, QUrl, Sign
 from PySide6.QtWebSockets import QWebSocket
 
 from .audio import AudioController
-from .applications import desktop_exec
+from .applications import desktop_activation_uri, desktop_exec
 from .i18n import tr
 from .keyboard import ShortcutError, VirtualKeyboard
 from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MEDIA, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep
@@ -297,7 +297,11 @@ class ActionRunner(QObject):
             return False
         gio = QStandardPaths.findExecutable("gio")
         if gio:
-            program, arguments = gio, ["launch", str(path)]
+            activation_uri = desktop_activation_uri(path)
+            if activation_uri:
+                program, arguments = gio, ["open", activation_uri]
+            else:
+                program, arguments = gio, ["launch", str(path)]
         else:
             launch = desktop_exec(path)
             if launch is None:
