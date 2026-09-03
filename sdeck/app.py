@@ -77,7 +77,9 @@ def resource_path(name: str) -> Path:
 
 def main() -> int:
     os.environ.setdefault("QT_LOGGING_RULES", "qt.qpa.services=false")
-    app = QApplication(sys.argv)
+    background = "--background" in sys.argv[1:]
+    qt_arguments = [argument for argument in sys.argv if argument != "--background"]
+    app = QApplication(qt_arguments)
     app.setApplicationName("YASDEC")
     app.setApplicationDisplayName("YASDEC — Yet Another Stream Deck Controller")
     app.setOrganizationName("YASDEC")
@@ -89,7 +91,8 @@ def main() -> int:
     icon = QIcon(str(resource_path("sdeck.svg")))
     app.setWindowIcon(icon)
     window = MainWindow(config_path, icon)
-    window.show()
+    if not background or not window.tray_available:
+        window.show()
     signal.signal(signal.SIGINT, lambda *_args: window.quit_app())
     signal_timer = QTimer()
     signal_timer.setInterval(250)

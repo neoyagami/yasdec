@@ -89,6 +89,28 @@ APPIMAGETOOL=/path/to/appimagetool ./packaging/build-appimage.sh
 The build produces `dist/YASDEC-x86_64.AppImage` and a matching SHA-256 file.
 On Bazzite, Gear Lever can integrate the AppImage with the application menu.
 
+YASDEC can also install its AppImage into the current user account and add it
+to the application menu without root privileges:
+
+```bash
+./YASDEC-x86_64.AppImage --install-user
+```
+
+To start the controller automatically with the desktop session, use:
+
+```bash
+./YASDEC-x86_64.AppImage --install-user --autostart
+```
+
+The AppImage is copied to `~/.local/share/yasdec` by default. The autostart
+entry launches it in background mode when a system tray is available. To remove
+the installed application and autostart entry while retaining personal
+configuration, run:
+
+```bash
+./YASDEC-x86_64.AppImage --uninstall-user
+```
+
 ### Continuous integration
 
 The GitHub Actions workflow in `.github/workflows/appimage.yml` runs on every

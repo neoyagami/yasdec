@@ -3,6 +3,21 @@ set -euo pipefail
 
 app_dir="${APPDIR:-$(cd "$(dirname "$0")" && pwd)}"
 
+if [[ "${1:-}" == "--install-user" ]] || [[ "${1:-}" == "--uninstall-user" ]]; then
+  if [[ -z "${APPIMAGE:-}" ]] || [[ ! -f "${APPIMAGE:-}" ]]; then
+    echo "The original AppImage path is unavailable; run this command from the AppImage itself." >&2
+    exit 1
+  fi
+  mode="install"
+  if [[ "$1" == "--uninstall-user" ]]; then
+    mode="uninstall"
+  fi
+  shift
+  /usr/bin/bash "$app_dir/usr/share/sdeck/install-appimage-user.sh" \
+    "$mode" "$APPIMAGE" "$app_dir/sdeck.desktop" "$app_dir/sdeck.svg" "$@"
+  exit $?
+fi
+
 if [[ "${1:-}" == "--install-uinput" ]] || [[ "${1:-}" == "--remove-uinput" ]]; then
   if [[ "${EUID}" -eq 0 ]]; then
     echo "Run the AppImage without sudo; YASDEC will request permission only for the uinput installer." >&2
