@@ -152,6 +152,7 @@
   "Command started": "Comando iniciado",
   "The application shortcut no longer exists": "El acceso de la aplicación ya no existe",
   "The application shortcut does not contain a valid command": "El acceso de la aplicación no contiene una orden válida",
+  "Could not open the application": "No se pudo abrir la aplicación",
   "Opening {name}": "Abriendo {name}",
   "WebSocket message sent": "Mensaje WebSocket enviado",
   "Select a valid audio channel": "Seleccione un canal de audio válido",

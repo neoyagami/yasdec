@@ -9,6 +9,7 @@ import threading
 from PySide6.QtCore import QObject, Signal
 
 from .i18n import tr
+from .process_environment import external_process_environment
 
 
 class SpectrumController(QObject):
@@ -41,6 +42,7 @@ class SpectrumController(QObject):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 bufsize=0,
+                env=external_process_environment(),
             )
         except OSError as exc:
             self.status.emit(tr("Could not start the analyzer: {error}", error=exc), False)
@@ -118,6 +120,7 @@ class StereoVuController(QObject):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 bufsize=0,
+                env=external_process_environment(),
             )
         except OSError as exc:
             self.status.emit(tr("Could not start the VU meter: {error}", error=exc), False)

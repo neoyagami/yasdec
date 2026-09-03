@@ -195,6 +195,9 @@ YASDEC discovers standard freedesktop `.desktop` entries from the user and
 system application directories as well as desktop shortcuts. Selecting an
 application copies its localized name and resolved theme icon to the key.
 Launching primarily uses `gio`, with a direct Desktop Entry `Exec` fallback.
+AppImage builds restore the host library search path before starting external
+programs, preventing bundled Qt/PyInstaller libraries from leaking into `gio`,
+Flatpak launchers, shell commands, or the selected desktop application.
 
 This approach works across GNOME, KDE Plasma, Cinnamon, XFCE, and MATE. The
 exact list of favorites pinned to a particular desktop dock is intentionally

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from .i18n import tr
+from .process_environment import external_process_environment
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,7 @@ class AudioController(QObject):
                     text=True,
                     timeout=2,
                     check=False,
+                    env=external_process_environment(),
                 )
                 if result.returncode != 0:
                     continue
@@ -94,6 +96,7 @@ class AudioController(QObject):
                 text=True,
                 timeout=3,
                 check=False,
+                env=external_process_environment(),
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             self.status.emit(tr("Audio error: {error}", error=exc), False)

@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QStandardPaths, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QProcess, QStandardPaths, QTimer, QUrl, Signal
 from PySide6.QtWebSockets import QWebSocket
 
 from .audio import AudioController
@@ -13,6 +13,7 @@ from .i18n import tr
 from .keyboard import ShortcutError, VirtualKeyboard
 from .model import ACTION_APPLICATION, ACTION_AUDIO, ACTION_KEYBOARD, ACTION_MEDIA, ACTION_MULTI, ACTION_NONE, ACTION_OBS, ACTION_SHELL, ACTION_SPACE, ACTION_SPECTRUM, ACTION_VU, ACTION_WEBSOCKET, KeyConfig, MultiActionStep
 from .obs import ObsManager
+from .process_environment import external_qprocess_environment
 from .spectrum import SpectrumController, StereoVuController
 
 
@@ -275,7 +276,7 @@ class ActionRunner(QObject):
             self.status.emit(tr("The command is empty"), False)
             return False
         process = QProcess(self)
-        environment = QProcessEnvironment.systemEnvironment()
+        environment = external_qprocess_environment()
         environment.insert("SDECK_TOGGLE_STATE", "on" if desired_state else "off")
         environment.insert("SDECK_TOGGLE_ACTIVE", "1" if desired_state else "0")
         environment.insert("SDECK_KEY_INDEX", str(index))
@@ -304,8 +305,18 @@ class ActionRunner(QObject):
                 return False
             program, arguments = launch
         process = QProcess(self)
+        process.setProcessEnvironment(external_qprocess_environment())
+        process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self._processes.add(process)
-        process.finished.connect(lambda *_args, p=process: self._processes.discard(p))
+        def finished(exit_code: int, _exit_status: QProcess.ExitStatus) -> None:
+            self._processes.discard(process)
+            if exit_code != 0:
+                detail = bytes(process.readAllStandardOutput()).decode(errors="replace").strip()
+                message = tr("Could not open the application")
+                self.status.emit(f"{message}: {detail}" if detail else message, False)
+            process.deleteLater()
+
+        process.finished.connect(finished)
         process.errorOccurred.connect(lambda error: self.status.emit(tr("Could not open the application ({error})", error=error), False))
         process.start(program, arguments)
         self.status.emit(tr("Opening {name}", name=path.stem), True)
