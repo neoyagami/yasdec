@@ -296,6 +296,12 @@ For an AppImage, use its built-in installer:
 ./YASDEC-x86_64.AppImage --install-uinput
 ```
 
+Run that command as your regular desktop user—do **not** put `sudo` before the
+AppImage. YASDEC copies only the small permission installer out of the AppImage
+mount and asks through `pkexec` (or falls back to `sudo`) to elevate that
+installer alone. This avoids FUSE permission failures and never runs the full
+desktop application as root.
+
 Sign out and back in once after installation. YASDEC then runs without root
 privileges. The installer grants only `/dev/uinput` access to the dedicated
 `sdeck-input` group; it does not grant access to physical keyboard events.

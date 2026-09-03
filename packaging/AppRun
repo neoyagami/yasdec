@@ -4,16 +4,31 @@ set -euo pipefail
 app_dir="${APPDIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 if [[ "${1:-}" == "--install-uinput" ]] || [[ "${1:-}" == "--remove-uinput" ]]; then
+  if [[ "${EUID}" -eq 0 ]]; then
+    echo "Run the AppImage without sudo; YASDEC will request permission only for the uinput installer." >&2
+    exit 2
+  fi
   desktop_user="$(id -un)"
-  permission_script="$app_dir/usr/share/sdeck/install-uinput.sh"
+  installer_source="$app_dir/usr/share/sdeck"
+  installer_temp="$(mktemp -d "${TMPDIR:-/tmp}/yasdec-uinput.XXXXXX")"
+  cleanup_installer() {
+    rm -rf -- "$installer_temp"
+  }
+  trap cleanup_installer EXIT
+  install -m 0700 "$installer_source/install-uinput.sh" "$installer_temp/install-uinput.sh"
+  install -m 0600 "$installer_source/70-sdeck-uinput.rules" "$installer_temp/70-sdeck-uinput.rules"
+  install -m 0600 "$installer_source/sdeck-uinput.conf" "$installer_temp/sdeck-uinput.conf"
+  permission_script="$installer_temp/install-uinput.sh"
   arguments=("$desktop_user")
   if [[ "$1" == "--remove-uinput" ]]; then
     arguments=("--remove" "$desktop_user")
   fi
   if command -v pkexec >/dev/null 2>&1; then
-    exec pkexec "$permission_script" "${arguments[@]}"
+    pkexec /usr/bin/bash "$permission_script" "${arguments[@]}"
+    exit $?
   fi
-  exec sudo "$permission_script" "${arguments[@]}"
+  sudo /usr/bin/bash "$permission_script" "${arguments[@]}"
+  exit $?
 fi
 
 exec "$app_dir/usr/lib/sdeck/YASDEC" "$@"
