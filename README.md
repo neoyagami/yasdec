@@ -10,9 +10,15 @@ icons, persistent toggle states, virtual spaces, application launching, OBS
 control, PipeWire/PulseAudio actions, WebSocket and shell commands, an HTTP API,
 and a full-deck spectrum analyzer.
 
+Configuration takes place in the native desktop window. No browser is required;
+the HTTP API and WebSocket actions provide integrations and automation.
+
 ![YASDEC main editor](docs/screenshots/yasdec-main.png)
 
 ### Interface previews
+
+These screenshots show the current Qt desktop editor with a sample configuration
+and simulated connection and audio levels.
 
 | Keyboard shortcut recorder | Full-deck 3 × 3 LCD spectrum |
 | --- | --- |
@@ -77,6 +83,15 @@ python3 -m pip install -e '.[hardware]'
 ```
 
 ### AppImage
+
+Download `YASDEC-x86_64.AppImage` from the
+[latest release](https://github.com/neoyagami/yasdec/releases/latest), make it
+executable, and open it:
+
+```bash
+chmod +x YASDEC-x86_64.AppImage
+./YASDEC-x86_64.AppImage
+```
 
 YASDEC can be packaged as a self-contained AppImage. Install the build tools in
 an isolated environment, provide `appimagetool`, and run:
@@ -206,10 +221,10 @@ for confirmation before replacing a key that is already configured.
 YASDEC discovers standard freedesktop `.desktop` entries from the user and
 system application directories as well as desktop shortcuts. Selecting an
 application copies its localized name and resolved theme icon to the key.
-Launching primarily uses `gio`, with a direct Desktop Entry `Exec` fallback.
-AppImage builds restore the host library search path before starting external
-programs, preventing bundled Qt/PyInstaller libraries from leaking into `gio`,
-Flatpak launchers, shell commands, or the selected desktop application.
+Launching uses `kstart` on KDE Plasma and `gtk-launch` on GNOME, with `gio`
+and the Desktop Entry `Exec` command as fallbacks. AppImage builds restore the
+host library search path and clear bundled Qt plugin paths before starting
+external programs, so desktop launchers use the system's libraries and plugins.
 
 This approach works across GNOME, KDE Plasma, Cinnamon, XFCE, and MATE. The
 exact list of favorites pinned to a particular desktop dock is intentionally
@@ -382,6 +397,9 @@ The bundled Lucide license is available at
 
 ## HTTP API
 
+This is an automation API, not a browser-based configuration interface. Its
+settings are available from the **API** button in the desktop editor.
+
 The API listens on `127.0.0.1` by default and supports bearer tokens, Basic
 authentication with the token as password, and `X-SDeck-Token`.
 
@@ -427,6 +445,15 @@ requirements.txt   Complete Python runtime dependencies
 requirements-build.txt  Additional AppImage build dependency
 pyproject.toml      Package metadata and optional dependency groups
 ```
+
+Regenerate the interface previews from the current source with:
+
+```bash
+python3 packaging/generate-screenshots.py
+```
+
+The generator uses a temporary sample configuration and simulated connections;
+it does not connect to a physical Stream Deck or OBS.
 
 ## Security notes
 

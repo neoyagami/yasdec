@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -93,7 +94,10 @@ def save(window: MainWindow, name: str) -> None:
         raise RuntimeError(f"Could not save {destination}")
 
 
-def main() -> int:
+@patch("sdeck.window.DeckBackend.connect_device")
+@patch("sdeck.window.ActionRunner.configure_obs")
+@patch("sdeck.audio.AudioController.refresh")
+def main(_audio_refresh, _configure_obs, _connect_device) -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     set_language("en")
     app = QApplication([])
