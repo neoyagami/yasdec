@@ -1075,11 +1075,11 @@ class KeyInspector(QWidget):
         spectrum_start = action == ACTION_SPECTRUM and self.spectrum_operation.currentData() == "start"
         vu_start = action == ACTION_VU and self.vu_operation.currentData() == "start"
         self.spectrum_mode_hint.setText(
-            tr("First press opens the analyzer full screen; second press returns to the optional key preview.")
+            tr("Press any key to exit full screen. Its assigned action will not run; optional previews stay active.")
             if spectrum_start else tr("This key only stops the analyzer; it never starts it.")
         )
         self.vu_mode_hint.setText(
-            tr("First press opens the VU meter full screen; second press returns to the optional key preview.")
+            tr("Press any key to exit full screen. Its assigned action will not run; optional previews stay active.")
             if vu_start else tr("This key only stops the VU meter; it never starts it.")
         )
         supports_toggle = action in (ACTION_SHELL, ACTION_WEBSOCKET, ACTION_AUDIO, ACTION_MULTI) or obs_toggle or spectrum_start or vu_start

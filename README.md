@@ -268,8 +268,10 @@ A spectrum start key behaves as a toggle:
   spectrum replaces that key's normal icon.
 - Disabled without preview: spectrum capture stops completely.
 
-The Spectrum and Stereo VU start keys are full-screen toggles: the first press
-opens the visualization and the second returns to its optional key preview.
+The Spectrum and Stereo VU start keys open the full-screen visualization.
+Press any Stream Deck key to return to the key grid and optional mini previews.
+That press only closes the full-screen view; it does not execute the pressed
+key's assigned action. Without a configured preview, capture stops.
 Separate stop-only keys are available for layouts that need a dedicated stop
 control. Mini Spectrum and mini VU previews can run simultaneously on different
 keys; only the full-screen modes are mutually exclusive.

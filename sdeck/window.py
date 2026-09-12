@@ -400,7 +400,10 @@ class MainWindow(QMainWindow):
     def trigger_key(self, index: int) -> None:
         keys = self.config.current().keys
         if 0 <= index < len(keys):
-            self.runner.trigger(index, keys[index], self.config.current_space)
+            # A press on the full-deck visualization only dismisses it. Keep
+            # this at the input boundary so running multi actions can continue.
+            if not self.runner.dismiss_visualizer():
+                self.runner.trigger(index, keys[index], self.config.current_space)
             self.schedule_save()
 
     def add_space(self) -> None:

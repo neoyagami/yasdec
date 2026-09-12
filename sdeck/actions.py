@@ -95,6 +95,33 @@ class ActionRunner(QObject):
     def connect_obs(self) -> None:
         self.obs.connect_now()
 
+    def dismiss_visualizer(self) -> bool:
+        """Leave full-deck visualization, keeping configured key previews."""
+        if self.spectrum_fullscreen:
+            key = self.spectrum_key
+            self.spectrum_fullscreen = False
+            if key is not None and key.spectrum_preview:
+                self._set_state(key, False)
+                self._set_spectrum_key_states()
+                self.spectrum_mode_changed.emit(True, max(1, min(20, key.spectrum_fps)))
+                self.status.emit(tr("Analyzer preview active"), True)
+            else:
+                self._stop_spectrum()
+        elif self.vu_fullscreen:
+            key = self.vu_key
+            self.vu_fullscreen = False
+            if key is not None and key.vu_preview:
+                self._set_state(key, False)
+                self._set_vu_key_states()
+                self.vu_mode_changed.emit(True, max(1, min(20, key.vu_fps)))
+                self.status.emit(tr("VU meter preview active"), True)
+            else:
+                self._stop_vu()
+        else:
+            return False
+        self._sync_visual_previews()
+        return True
+
     def trigger(self, index: int, key: KeyConfig, space_id: str = "") -> None:
         if key.action == ACTION_MULTI:
             self._run_multi_action(index, key, space_id)
@@ -126,15 +153,7 @@ class ActionRunner(QObject):
         elif key.action == ACTION_SPECTRUM:
             if key.spectrum_operation == "start":
                 if self.spectrum_fullscreen and self.spectrum_key is key:
-                    self.spectrum_fullscreen = False
-                    self._set_state(key, False)
-                    self.key_changed.emit(index)
-                    if key.spectrum_preview:
-                        self.spectrum_mode_changed.emit(True, max(1, min(20, key.spectrum_fps)))
-                        self.status.emit(tr("Analyzer preview active"), True)
-                    else:
-                        self._stop_spectrum()
-                    self._sync_visual_previews()
+                    self.dismiss_visualizer()
                     return
                 self._spectrum_silence_stopped.discard(id(key))
                 self._spectrum_last_activity = time.monotonic()
@@ -169,15 +188,7 @@ class ActionRunner(QObject):
         elif key.action == ACTION_VU:
             if key.vu_operation == "start":
                 if self.vu_fullscreen and self.vu_key is key:
-                    self.vu_fullscreen = False
-                    self._set_state(key, False)
-                    self.key_changed.emit(index)
-                    if key.vu_preview:
-                        self.vu_mode_changed.emit(True, max(1, min(20, key.vu_fps)))
-                        self.status.emit(tr("VU meter preview active"), True)
-                    else:
-                        self._stop_vu()
-                    self._sync_visual_previews()
+                    self.dismiss_visualizer()
                     return
                 self._vu_silence_stopped.discard(id(key))
                 self._vu_last_activity = time.monotonic()
