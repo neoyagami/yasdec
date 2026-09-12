@@ -1,4 +1,7 @@
 {
+  "LCD cells · {size} × {size}": "Celdas LCD · {size} × {size}",
+  "Segments per key": "Segmentos por tecla",
+  "More segments increase full-screen resolution; dark gaps remain between blocks": "Más segmentos aumentan la resolución a pantalla completa; se mantienen separaciones oscuras entre los bloques",
   "Stream Deck controller": "Controlador de Stream Deck",
   "Stream Deck Neo (keys)": "Stream Deck Neo (teclas)",
   "Searching for device…": "Buscando dispositivo…",

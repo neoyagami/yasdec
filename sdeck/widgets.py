@@ -130,7 +130,7 @@ class KeyButton(QAbstractButton):
         self.spectrum_level = None
         self.spectrum_cells = list(levels) if levels is not None else None
         self.spectrum_cell_colors = [QColor(color) for color in (colors or [])]
-        self.spectrum_grid_size = max(1, min(3, grid_size))
+        self.spectrum_grid_size = max(1, min(6, grid_size))
         self.update()
 
     def set_mini_spectrum(self, levels: list[float] | None) -> None:
@@ -492,6 +492,7 @@ class KeyInspector(QWidget):
         self.vu_kind.currentIndexChanged.connect(self._vu_kind_changed)
         self.vu_target.currentIndexChanged.connect(self._store)
         self.vu_fps.valueChanged.connect(self._store)
+        self.vu_segments.valueChanged.connect(self._store)
         self.vu_preview.toggled.connect(self._store)
         self.vu_auto_stop.toggled.connect(self._visual_option_changed)
         self.vu_silence_seconds.valueChanged.connect(self._store)
@@ -593,6 +594,8 @@ class KeyInspector(QWidget):
         self.spectrum_grid.addItem(tr("Solid block"), 1)
         self.spectrum_grid.addItem(tr("LCD cells · 2 × 2"), 2)
         self.spectrum_grid.addItem(tr("LCD cells · 3 × 3"), 3)
+        for grid in range(4, 7):
+            self.spectrum_grid.addItem(tr("LCD cells · {size} × {size}", size=grid), grid)
         self.spectrum_preview = QCheckBox(tr("Preview on this key"))
         self.spectrum_preview.setToolTip(tr("Keeps capture active and displays a mini spectrum while full screen is off"))
         self.spectrum_auto_scale = QCheckBox(tr("Automatic gain"))
@@ -635,6 +638,10 @@ class KeyInspector(QWidget):
         self.vu_fps.setRange(1, 20)
         self.vu_fps.setValue(12)
         self.vu_fps.setSuffix(" FPS")
+        self.vu_segments = QSpinBox()
+        self.vu_segments.setRange(3, 8)
+        self.vu_segments.setValue(3)
+        self.vu_segments.setToolTip(tr("More segments increase full-screen resolution; dark gaps remain between blocks"))
         self.vu_preview = QCheckBox(tr("Preview on this key"))
         self.vu_preview.setToolTip(tr("Keeps stereo capture active and displays a mini VU meter while full screen is off"))
         self.vu_auto_stop = QCheckBox(tr("Auto-stop when silent"))
@@ -661,6 +668,7 @@ class KeyInspector(QWidget):
         self.vu_form.addRow(tr("Type"), self.vu_kind)
         self.vu_form.addRow(tr("Channel"), self.vu_target)
         self.vu_form.addRow(tr("Speed"), self.vu_fps)
+        self.vu_form.addRow(tr("Segments per key"), self.vu_segments)
         self.vu_form.addRow(tr("Neon gradient"), colors)
         self.vu_form.addRow(tr("Inactive view"), self.vu_preview)
         self.vu_form.addRow(tr("Silence"), self.vu_silence_controls)
@@ -957,6 +965,7 @@ class KeyInspector(QWidget):
         self.key = key
         self.setEnabled(True)
         widgets = [self.label, self.background_color, self.active_background_color, self.text_color, self.icon_color, self.action, self.command, self.command_off, self.ws_url, self.payload_on, self.payload_off, self.audio_kind, self.audio_target, self.obs_operation, self.obs_scene, self.obs_group, self.obs_target, self.spectrum_operation, self.spectrum_kind, self.spectrum_target, self.spectrum_fps, self.spectrum_grid, self.spectrum_preview, self.spectrum_auto_scale, self.spectrum_auto_stop, self.spectrum_silence_seconds, self.vu_operation, self.vu_kind, self.vu_target, self.vu_fps, self.vu_preview, self.vu_auto_stop, self.vu_silence_seconds, self.vu_color_start, self.vu_color_end, self.target, self.keyboard_shortcut, self.media_control, self.toggle, self.timer]
+        widgets.append(self.vu_segments)
         for widget in widgets:
             widget.blockSignals(True)
         self.label.setText(key.label)
@@ -983,7 +992,7 @@ class KeyInspector(QWidget):
         self.spectrum_kind.setCurrentIndex(max(0, self.spectrum_kind.findData(key.spectrum_kind)))
         self._reload_spectrum_targets(key.spectrum_target)
         self.spectrum_fps.setValue(key.spectrum_fps)
-        self.spectrum_grid.setCurrentIndex(max(0, self.spectrum_grid.findData(max(1, min(3, key.spectrum_grid_size)))))
+        self.spectrum_grid.setCurrentIndex(max(0, self.spectrum_grid.findData(max(1, min(6, key.spectrum_grid_size)))))
         self.spectrum_preview.setChecked(key.spectrum_preview)
         self.spectrum_auto_scale.setChecked(key.spectrum_auto_scale)
         self.spectrum_auto_stop.setChecked(key.spectrum_auto_stop)
@@ -992,6 +1001,7 @@ class KeyInspector(QWidget):
         self.vu_kind.setCurrentIndex(max(0, self.vu_kind.findData(key.vu_kind)))
         self._reload_vu_targets(key.vu_target)
         self.vu_fps.setValue(key.vu_fps)
+        self.vu_segments.setValue(key.vu_segments)
         self.vu_preview.setChecked(key.vu_preview)
         self.vu_auto_stop.setChecked(key.vu_auto_stop)
         self.vu_silence_seconds.setValue(key.vu_silence_seconds)
@@ -1121,6 +1131,7 @@ class KeyInspector(QWidget):
         self.vu_form.setRowVisible(self.vu_kind, vu_start)
         self.vu_form.setRowVisible(self.vu_target, vu_start)
         self.vu_form.setRowVisible(self.vu_fps, vu_start)
+        self.vu_form.setRowVisible(self.vu_segments, vu_start)
         self.vu_form.setRowVisible(self.vu_preview, vu_start)
         self.vu_form.setRowVisible(self.vu_silence_controls, vu_start)
         self.vu_silence_seconds.setEnabled(self.vu_auto_stop.isChecked())
@@ -1166,6 +1177,7 @@ class KeyInspector(QWidget):
         self.key.vu_kind = str(self.vu_kind.currentData())
         self.key.vu_target = str(self.vu_target.currentData() or "")
         self.key.vu_fps = self.vu_fps.value()
+        self.key.vu_segments = self.vu_segments.value()
         self.key.vu_preview = self.vu_preview.isChecked()
         self.key.vu_auto_stop = self.vu_auto_stop.isChecked()
         self.key.vu_silence_seconds = self.vu_silence_seconds.value()

@@ -160,7 +160,7 @@ class ActionRunner(QObject):
                 if self.vu_active:
                     self._stop_vu()
                 device = self.audio.capture_device(key.spectrum_kind, key.spectrum_target)
-                band_count = self._spectrum_columns * max(1, min(3, key.spectrum_grid_size))
+                band_count = self._spectrum_columns * max(1, min(6, key.spectrum_grid_size))
                 if (
                     self.spectrum_active
                     and self.spectrum_key is key
@@ -476,7 +476,7 @@ class ActionRunner(QObject):
             if candidate is None:
                 return
             device = self.audio.capture_device(candidate.spectrum_kind, candidate.spectrum_target)
-            band_count = self._spectrum_columns * max(1, min(3, candidate.spectrum_grid_size))
+            band_count = self._spectrum_columns * max(1, min(6, candidate.spectrum_grid_size))
             if not device:
                 return
             if (
@@ -507,7 +507,7 @@ class ActionRunner(QObject):
         if not candidate.spectrum_auto_stop:
             self._spectrum_silence_stopped.discard(id(candidate))
         device = self.audio.capture_device(candidate.spectrum_kind, candidate.spectrum_target)
-        band_count = self._spectrum_columns * max(1, min(3, candidate.spectrum_grid_size))
+        band_count = self._spectrum_columns * max(1, min(6, candidate.spectrum_grid_size))
         if not device:
             return
         if (

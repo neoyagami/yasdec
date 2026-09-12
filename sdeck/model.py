@@ -115,6 +115,7 @@ class KeyConfig:
     vu_kind: str = "sink"
     vu_target: str = ""
     vu_fps: int = 12
+    vu_segments: int = 3
     vu_preview: bool = False
     vu_auto_stop: bool = False
     vu_silence_seconds: int = 30
@@ -135,7 +136,7 @@ class KeyConfig:
             items = values.get(name, [])
             values[name] = [MultiActionStep.from_dict(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else []
         try:
-            values["spectrum_grid_size"] = max(1, min(3, int(values.get("spectrum_grid_size", 1))))
+            values["spectrum_grid_size"] = max(1, min(6, int(values.get("spectrum_grid_size", 1))))
         except (TypeError, ValueError):
             values["spectrum_grid_size"] = 1
         for name in ("spectrum_silence_seconds", "vu_silence_seconds"):
@@ -143,6 +144,10 @@ class KeyConfig:
                 values[name] = max(5, min(3600, int(values.get(name, 30))))
             except (TypeError, ValueError):
                 values[name] = 30
+        try:
+            values["vu_segments"] = max(3, min(8, int(values.get("vu_segments", 3))))
+        except (TypeError, ValueError):
+            values["vu_segments"] = 3
         if values.get("media_control", "PLAYPAUSE") not in MEDIA_CONTROLS:
             values["media_control"] = "PLAYPAUSE"
         return cls(**values)

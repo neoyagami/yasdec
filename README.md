@@ -279,9 +279,11 @@ When preview is disabled and no custom icon or symbol is configured, YASDEC
 uses a bundled waveform icon for Spectrum or a controls icon for Stereo VU.
 
 Columns represent logarithmic frequency bands and rows represent intensity.
-The block style can be solid, a 2 × 2 LCD grid, or a 3 × 3 LCD grid. The 3 × 3
-style turns every key into nine small retro colored cells and samples three
-frequency bands across each physical key.
+The block style can be solid or an LCD grid from 2 × 2 to 6 × 6 cells per key.
+Higher grid resolutions add both frequency bands and vertical level steps.
+A 6 × 6 grid on a five-column, three-row deck provides 30 frequency bands and
+18 level steps. Dark gaps separate the cells even when all are lit, preserving
+the look of vintage audio displays.
 Spectrum levels use a fixed −60 dBFS to 0 dBFS scale by default, so the display
 represents the actual signal level. **Automatic gain** can be enabled per key
 when consistently filling the available height is preferred instead.
@@ -297,8 +299,10 @@ reduce uncompressed HID traffic.
 
 The stereo VU action is a toggle like the spectrum analyzer. On a three-row
 deck, the upper row displays the left channel and the lower row displays the
-right channel. Every physical key contains three full-height segments, giving
-15 horizontal segments on a five-column deck. The middle row remains dark.
+right channel. **Segments per key** sets 3–8 full-height blocks per physical key,
+giving 15–40 horizontal segments per channel on a five-column deck. The default
+is 3, preserving existing layouts. Dark gaps separate every block at all
+resolutions, and the middle row remains dark.
 
 The start and end colors of the retro neon gradient are configured on the
 assigned key. With **Preview on this key** enabled, switching off the full-deck

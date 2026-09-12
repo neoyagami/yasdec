@@ -91,7 +91,7 @@ class DeckBackend(QObject):
         if not self.deck:
             return
         with self._condition:
-            self._pending_spectrum = ("spectrum", deepcopy(levels), set(stop_indices), deepcopy(colors), max(1, min(3, grid_size)))
+            self._pending_spectrum = ("spectrum", deepcopy(levels), set(stop_indices), deepcopy(colors), max(1, min(6, grid_size)))
             self._condition.notify()
 
     def render_mini_spectrum(self, index: int, key: KeyConfig, levels: list[float]) -> None:
@@ -545,7 +545,7 @@ def render_spectrum_key(
     colors = spectrum_colors(color, len(values))
     image = Image.new("RGB", size, "#101419")
     draw = ImageDraw.Draw(image)
-    grid_size = max(1, min(3, int(grid_size)))
+    grid_size = max(1, min(6, int(grid_size)))
     if grid_size == 1:
         height = int((size[1] - 10) * values[0])
         draw.rounded_rectangle((7, size[1] - 5 - height, size[0] - 7, size[1] - 5), radius=4, fill=colors[0])

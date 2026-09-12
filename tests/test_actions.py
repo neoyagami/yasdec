@@ -41,10 +41,10 @@ class SpectrumToggleTests(unittest.TestCase):
 
         runner.trigger(0, key)
         self.assertEqual(starts, [5])
-        key.spectrum_grid_size = 3
+        key.spectrum_grid_size = 6
         runner.sync_spectrum_preview()
-        self.assertEqual(starts, [5, 15])
-        self.assertEqual(runner._spectrum_band_count, 15)
+        self.assertEqual(starts, [5, 30])
+        self.assertEqual(runner._spectrum_band_count, 30)
         runner.close()
 
     def test_silence_auto_stop_does_not_restart_preview_until_pressed(self) -> None:

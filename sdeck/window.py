@@ -551,7 +551,7 @@ class MainWindow(QMainWindow):
         stop_indices = {index for index, key in enumerate(keys) if key.action == ACTION_SPECTRUM and key.spectrum_operation == "stop"}
         rows = (self.config.key_count + self.config.columns - 1) // self.config.columns
         spectrum_key = self.runner.spectrum_key
-        grid_size = max(1, min(3, spectrum_key.spectrum_grid_size if spectrum_key else 1))
+        grid_size = max(1, min(6, spectrum_key.spectrum_grid_size if spectrum_key else 1))
         key_levels: list = []
         key_colors: list = []
         for index, button in enumerate(self.key_buttons):
@@ -617,7 +617,8 @@ class MainWindow(QMainWindow):
         if meter_key is None:
             return
         rows = (self.config.key_count + self.config.columns - 1) // self.config.columns
-        segment_count = self.config.columns * 3
+        segments_per_key = max(3, min(8, meter_key.vu_segments))
+        segment_count = self.config.columns * segments_per_key
         colors = [blend_color(meter_key.vu_color_start, meter_key.vu_color_end, index / max(1, segment_count - 1)) for index in range(segment_count)]
         key_levels: list[list[float]] = []
         key_colors: list[list[str]] = []
@@ -625,8 +626,8 @@ class MainWindow(QMainWindow):
             row, column = divmod(index, self.config.columns)
             channel = 0 if row == 0 else 1 if row == rows - 1 else -1
             active = round(max(0.0, min(1.0, self.vu_levels[channel])) * segment_count) if channel >= 0 else 0
-            levels = [1.0 if column * 3 + inner < active else 0.0 for inner in range(3)]
-            cell_colors = colors[column * 3 : column * 3 + 3]
+            levels = [1.0 if column * segments_per_key + inner < active else 0.0 for inner in range(segments_per_key)]
+            cell_colors = colors[column * segments_per_key : (column + 1) * segments_per_key]
             key_levels.append(levels)
             key_colors.append(cell_colors)
             button.set_vu_cells(levels, cell_colors)
