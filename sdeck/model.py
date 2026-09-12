@@ -109,6 +109,8 @@ class KeyConfig:
     spectrum_preview: bool = False
     spectrum_grid_size: int = 1
     spectrum_auto_scale: bool = False
+    spectrum_gain_db: int = 0
+    spectrum_fall_ms: int = 800
     spectrum_auto_stop: bool = False
     spectrum_silence_seconds: int = 30
     vu_operation: str = "start"
@@ -148,6 +150,11 @@ class KeyConfig:
             values["vu_segments"] = max(3, min(8, int(values.get("vu_segments", 3))))
         except (TypeError, ValueError):
             values["vu_segments"] = 3
+        for name, low, high, default in (("spectrum_gain_db", -12, 30, 0), ("spectrum_fall_ms", 0, 3000, 800)):
+            try:
+                values[name] = max(low, min(high, int(values.get(name, default))))
+            except (TypeError, ValueError):
+                values[name] = default
         if values.get("media_control", "PLAYPAUSE") not in MEDIA_CONTROLS:
             values["media_control"] = "PLAYPAUSE"
         return cls(**values)

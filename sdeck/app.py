@@ -36,8 +36,8 @@ QTabBar::tab:selected { background: #236d61; color: white; }
 #deckTitle { font-size: 23px; font-weight: 750; }
 #deckFrame { background: #242b32; border: 1px solid #3b4650; border-radius: 8px; }
 #iconPreview { background: #20272e; border: 1px solid #3b4650; border-radius: 5px; color: #87939e; font-size: 20px; }
-QLineEdit, QPlainTextEdit, QComboBox { background: #1b2127; border: 1px solid #3a454f; border-radius: 5px; padding: 7px 9px; selection-background-color: #147b68; }
-QLineEdit:focus, QPlainTextEdit:focus, QComboBox:focus { border-color: #42d3b3; }
+QLineEdit, QPlainTextEdit, QComboBox, QSpinBox { background: #1b2127; border: 1px solid #3a454f; border-radius: 5px; padding: 7px 9px; selection-background-color: #147b68; }
+QLineEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus { border-color: #42d3b3; }
 QPushButton { background: #2a333c; border: 1px solid #43505b; border-radius: 5px; padding: 8px 13px; font-weight: 600; }
 QPushButton:hover { background: #34404a; border-color: #647482; }
 QPushButton:pressed { background: #147b68; }

@@ -9,6 +9,14 @@ from sdeck.window import MainWindow
 
 
 class VisualizerResolutionTests(unittest.TestCase):
+    def test_response_settings_round_trip_and_defaults(self):
+        key = KeyConfig(spectrum_gain_db=12, spectrum_fall_ms=1200)
+        restored = KeyConfig.from_dict(key.to_dict())
+        self.assertEqual((restored.spectrum_gain_db, restored.spectrum_fall_ms), (12, 1200))
+        default = KeyConfig.from_dict({})
+        self.assertEqual((default.spectrum_gain_db, default.spectrum_fall_ms), (0, 800))
+        self.assertFalse(default.spectrum_auto_scale)
+
     def test_resolution_settings_round_trip_and_old_defaults(self):
         key = KeyConfig(spectrum_grid_size=6, vu_segments=8)
         restored = KeyConfig.from_dict(key.to_dict())

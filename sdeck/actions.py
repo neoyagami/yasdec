@@ -151,6 +151,8 @@ class ActionRunner(QObject):
             self.obs.trigger(key.obs_operation, key.obs_scene, key.obs_target, desired_state, key.obs_group)
             executed = False
         elif key.action == ACTION_SPECTRUM:
+            self.spectrum.gain_db = key.spectrum_gain_db
+            self.spectrum.fall_ms = key.spectrum_fall_ms
             if key.spectrum_operation == "start":
                 if self.spectrum_fullscreen and self.spectrum_key is key:
                     self.dismiss_visualizer()
@@ -475,6 +477,8 @@ class ActionRunner(QObject):
             candidate = self.spectrum_key
             if candidate is None:
                 return
+            self.spectrum.gain_db = candidate.spectrum_gain_db
+            self.spectrum.fall_ms = candidate.spectrum_fall_ms
             device = self.audio.capture_device(candidate.spectrum_kind, candidate.spectrum_target)
             band_count = self._spectrum_columns * max(1, min(6, candidate.spectrum_grid_size))
             if not device:
@@ -506,6 +510,8 @@ class ActionRunner(QObject):
             return
         if not candidate.spectrum_auto_stop:
             self._spectrum_silence_stopped.discard(id(candidate))
+        self.spectrum.gain_db = candidate.spectrum_gain_db
+        self.spectrum.fall_ms = candidate.spectrum_fall_ms
         device = self.audio.capture_device(candidate.spectrum_kind, candidate.spectrum_target)
         band_count = self._spectrum_columns * max(1, min(6, candidate.spectrum_grid_size))
         if not device:

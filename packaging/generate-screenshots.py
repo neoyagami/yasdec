@@ -21,6 +21,7 @@ from sdeck.app import STYLESHEET
 from sdeck.i18n import set_language
 from sdeck.model import ACTION_AUDIO, ACTION_KEYBOARD, ACTION_OBS, ACTION_SHELL, ACTION_SPECTRUM, ACTION_VU, AppConfig
 from sdeck.window import MainWindow
+from sdeck.spectrum import release_level
 
 
 OUTPUT_DIR = PROJECT_DIR / "docs" / "screenshots"
@@ -112,7 +113,7 @@ def main(_audio_refresh, _configure_obs, _connect_device) -> int:
         config_path = Path(directory) / "config.json"
         sample_config(config_path)
         window = MainWindow(config_path, app_icon)
-        window.resize(1440, 900)
+        window.resize(1440, 1080)
         window.show()
         settle(app, window)
 
@@ -134,6 +135,24 @@ def main(_audio_refresh, _configure_obs, _connect_device) -> int:
         settle(app, window)
         save(window, "yasdec-spectrum-lcd.png")
 
+        analyzer_key.spectrum_grid_size = 6
+        analyzer_key.spectrum_gain_db = 12
+        analyzer_key.spectrum_fall_ms = 1200
+        window.select_key(4)
+        # A deterministic display snapshot; no audio or hardware is accessed.
+        window.spectrum_levels = [0.35, 0.48, 0.62, 0.78, 0.9, 0.84, 0.72, 0.65,
+                                  0.59, 0.67, 0.79, 0.87, 0.93, 0.81, 0.69, 0.58,
+                                  0.47, 0.55, 0.66, 0.76, 0.84, 0.72, 0.62, 0.52,
+                                  0.44, 0.57, 0.69, 0.61, 0.49, 0.38]
+        window._draw_spectrum()
+        settle(app, window)
+        save(window, "yasdec-spectrum-dense.png")
+        window.spectrum_levels = [release_level(level, 0.0, 0.3, 1.2)
+                                  for level in window.spectrum_levels]
+        window._draw_spectrum()
+        settle(app, window)
+        save(window, "yasdec-spectrum-release.png")
+
         vu_key = window.config.current().keys[14]
         window.runner.spectrum_active = False
         window.runner.spectrum_fullscreen = False
@@ -145,6 +164,12 @@ def main(_audio_refresh, _configure_obs, _connect_device) -> int:
         window._draw_vu()
         settle(app, window)
         save(window, "yasdec-vu-stereo.png")
+
+        vu_key.vu_segments = 8
+        window.select_key(14)
+        window._draw_vu()
+        settle(app, window)
+        save(window, "yasdec-vu-dense.png")
 
         window.runner.close()
         window.deck.close()

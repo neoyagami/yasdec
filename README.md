@@ -287,6 +287,30 @@ the look of vintage audio displays.
 Spectrum levels use a fixed −60 dBFS to 0 dBFS scale by default, so the display
 represents the actual signal level. **Automatic gain** can be enabled per key
 when consistently filling the available height is preferred instead.
+With automatic gain off, **Visual gain** adds a fixed −12 to +30 dB display
+offset without changing playback volume or adapting to each song. Try +12 dB
+if the bars sit too low. **Bar fall time** controls a fast-attack, slow-release
+effect: the default 800 ms is the time to fall from full height to zero.
+Set it to 0 for immediate readings or increase it up to 3000 ms for a slower
+fall. The response follows audio sample time, independently of display FPS,
+and does not affect the raw signal used for silence detection.
+
+#### Example: dense vintage spectrum
+
+Select **LCD cells · 6 × 6**, turn **Automatic gain** off, set **Visual gain** to
+**+12 dB**, and choose **1200 ms** for **Bar fall time**. This is a starting
+point for a slower, fuller display with fixed sensitivity. Gain only affects
+the display, and values above the fixed range clip at the top.
+
+| 6 × 6 cells per key | The same display after 300 ms of silence |
+| --- | --- |
+| ![Dense spectrum with fixed gain and slow fall controls](docs/screenshots/yasdec-spectrum-dense.png) | ![Spectrum bars falling gradually while retaining dark cell gaps](docs/screenshots/yasdec-spectrum-release.png) |
+
+These are sample levels rendered by the Qt editor; the second image applies
+the actual release calculation to the first. It illustrates gradual bar decay,
+not floating peak markers. This release adds no separate peak markers, and
+the new gain and fall controls apply to Spectrum, not Stereo VU.
+
 Recommended frame rates are 12 FPS for Mini, 8 FPS for Original/MK.2, 10 FPS
 for Neo, and 4 FPS for XL. Rendering happens in a worker thread, retains only
 the newest pending frame, and skips unchanged keys.
@@ -315,6 +339,12 @@ full-screen view and any mini preview, and remains stopped until its start key
 is pressed again.
 
 ![Horizontal stereo VU meter](docs/screenshots/yasdec-vu-stereo.png)
+
+For a denser vintage meter, set **Segments per key** to **8**. On this 5 × 3
+layout, each channel has 40 separated segments; the empty middle row keeps
+the channels visually distinct.
+
+![Stereo VU with eight separated segments per key](docs/screenshots/yasdec-vu-dense.png)
 
 ### Shell
 

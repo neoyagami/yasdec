@@ -28,6 +28,8 @@ class SpectrumController(QObject):
         self._stop = threading.Event()
         self._peak = 1.0
         self._auto_scale = False
+        self.gain_db = 0.0
+        self.fall_ms = 800
 
     def start(self, device: str, band_count: int, auto_scale: bool = False) -> bool:
         self.stop()
@@ -75,6 +77,7 @@ class SpectrumController(QObject):
         byte_count = self.SAMPLE_COUNT * 2
         frequencies = log_frequencies(band_count, 55.0, 7000.0)
         coefficients = [2.0 * math.cos(2.0 * math.pi * frequency / self.SAMPLE_RATE) for frequency in frequencies]
+        previous = [0.0] * band_count
         while not self._stop.is_set():
             data = read_exact(self._process.stdout, byte_count)
             if len(data) != byte_count:
@@ -87,7 +90,10 @@ class SpectrumController(QObject):
                 self._peak = max(frame_peak, self._peak * 0.94, 1.0)
                 levels = [min(1.0, max(0.0, math.log10(1.0 + power) / math.log10(1.0 + self._peak))) for power in powers]
             else:
-                levels = [spectrum_power_level(power, self.SAMPLE_COUNT) for power in powers]
+                levels = [spectrum_power_level(power, self.SAMPLE_COUNT, gain_db=self.gain_db) for power in powers]
+            previous = [release_level(old, new, self.SAMPLE_COUNT / self.SAMPLE_RATE, self.fall_ms / 1000.0)
+                        for old, new in zip(previous, levels)]
+            levels = previous
             self.levels_changed.emit(levels)
         if not self._stop.is_set():
             self.status.emit(tr("Analyzer capture ended"), False)
@@ -195,14 +201,21 @@ def pcm_signal_level(samples: tuple[int, ...], floor_db: float = -60.0) -> float
     return max(0.0, min(1.0, (dbfs - floor) / -floor))
 
 
-def spectrum_power_level(power: float, sample_count: int, floor_db: float = -60.0) -> float:
+def release_level(previous: float, current: float, elapsed: float, fall_seconds: float) -> float:
+    """Immediate attack with a linear full-scale fall time, independent of FPS."""
+    if fall_seconds <= 0:
+        return current
+    return max(current, previous - max(0.0, elapsed) / fall_seconds, 0.0)
+
+
+def spectrum_power_level(power: float, sample_count: int, floor_db: float = -60.0, gain_db: float = 0.0) -> float:
     """Map Hann-windowed Goertzel power to a fixed dBFS display level."""
     if power <= 0.0 or sample_count <= 0:
         return 0.0
     # A Hann window has a coherent gain of roughly 0.5.  Recover the tone
     # amplitude from the DFT magnitude before converting it to dBFS.
     amplitude = 4.0 * math.sqrt(power) / sample_count
-    dbfs = 20.0 * math.log10(max(1.0, amplitude) / 32768.0)
+    dbfs = 20.0 * math.log10(max(1.0, amplitude) / 32768.0) + gain_db
     floor = min(-1.0, float(floor_db))
     return max(0.0, min(1.0, (dbfs - floor) / -floor))
 

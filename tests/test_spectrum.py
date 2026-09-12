@@ -1,10 +1,31 @@
 import math
 import unittest
 
-from sdeck.spectrum import SpectrumController, capture_command, goertzel, log_frequencies, spectrum_power_level, stereo_vu_levels
+from sdeck.spectrum import SpectrumController, capture_command, goertzel, log_frequencies, release_level, spectrum_power_level, stereo_vu_levels
 
 
 class SpectrumMathTests(unittest.TestCase):
+    def test_bar_release_is_slow_but_attack_is_immediate(self):
+        self.assertEqual(release_level(0.2, 0.9, 0.1, 0.8), 0.9)
+        self.assertAlmostEqual(release_level(1.0, 0.0, 0.2, 0.8), 0.75)
+        self.assertEqual(release_level(0.2, 0.3, 0.2, 0.8), 0.3)
+        self.assertEqual(release_level(1.0, 0.0, 0.1, 0), 0.0)
+        level = 1.0
+        for _ in range(8):
+            level = release_level(level, 0.0, 0.1, 0.8)
+        self.assertAlmostEqual(level, 0.0)
+        self.assertAlmostEqual(release_level(1.0, 0.0, 0.8, 0.8), level)
+
+    def test_visual_gain_is_a_fixed_db_offset_and_silence_stays_zero(self):
+        n = 1024
+        for db in (-45, -30):
+            amplitude = 32768 * 10 ** (db / 20)
+            power = (amplitude * n / 4) ** 2
+            base = spectrum_power_level(power, n)
+            boosted = spectrum_power_level(power, n, gain_db=12)
+            self.assertAlmostEqual(boosted - base, 12 / 60)
+        self.assertEqual(spectrum_power_level(0, n, gain_db=30), 0)
+
     def test_fixed_spectrum_scale_tracks_dbfs_without_auto_gain(self) -> None:
         sample_rate = 16_000
         sample_count = 1024
